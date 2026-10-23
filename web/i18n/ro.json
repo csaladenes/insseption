@@ -28,6 +28,6 @@
   "ex2": "Câți salariați sunt în fiecare județ?",
   "ex3": "Care este cea mai recentă populație a Bucureștiului?",
   "docs_path": "/docs/ro",
-  "ref_path": "/docs/reference",
+  "ref_path": "/docs/ro/reference",
   "context_reset": "Contextul conversației a fost resetat după 30 de minute de inactivitate."
 }

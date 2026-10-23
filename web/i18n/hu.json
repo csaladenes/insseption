@@ -28,6 +28,6 @@
   "ex2": "Hány alkalmazott van megyénként?",
   "ex3": "Mi Bukarest legfrissebb népessége?",
   "docs_path": "/docs/hu",
-  "ref_path": "/docs/reference",
+  "ref_path": "/docs/hu/reference",
   "context_reset": "A beszélgetés kontextusa 30 perc inaktivitás után törlődött."
 }

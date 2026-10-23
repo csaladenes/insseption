@@ -2,7 +2,8 @@
 
     GET /docs              EN, or redirect to /docs/ro|/docs/hu from Accept-Language
     GET /docs/en|ro|hu     Guide: quick start, model, recipes, catalogue, reference, errors, cite
-    GET /docs/reference    Swagger UI on /openapi.json
+    GET /docs/{en|ro|hu}/reference  Swagger UI (chrome localized)
+    GET /docs/reference             redirect → Accept-Language variant
     GET /openapi.json      OpenAPI schema with servers + tags
 """
 
@@ -66,13 +67,18 @@ def table(headers: list[str], rows: list[str], empty: str, cls: str = "") -> str
 
 
 def page_path(lang: str) -> str:
-    return "/docs/en" if lang == "en" else f"/docs/{lang}"
+    return f"/docs/{lang}"
 
 
-def lang_switch(lang: str) -> str:
+def ref_path(lang: str) -> str:
+    return f"/docs/{lang}/reference"
+
+
+def lang_switch(lang: str, *, kind: str = "guide") -> str:
     t = I.UI[lang]
+    href = ref_path if kind == "reference" else page_path
     items = "".join(
-        f'<li><a href="{page_path(code)}" hreflang="{code}" lang="{code}"'
+        f'<li><a href="{href(code)}" hreflang="{code}" lang="{code}"'
         f'{" aria-current=true" if code == lang else ""}>{I.NAMES[code]}</a></li>'
         for code in I.ORDER
     )
@@ -88,11 +94,13 @@ def shell(
     *,
     lang: str = "en",
     guide: str = "/docs",
+    kind: str = "guide",
     extra_head: str = "",
     scripts: str = "",
 ) -> HTMLResponse:
     t = I.UI[lang]
-    switch = f'<div class="langs">{lang_switch(lang)}</div>'
+    switch = f'<div class="langs">{lang_switch(lang, kind=kind)}</div>'
+    ref = ref_path(lang)
     return HTMLResponse(
         f"""<!doctype html><html lang="{lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -101,7 +109,7 @@ def shell(
 <style>{STYLE}</style>{extra_head}</head><body>
 <header><div class="brand"><a href="/" style="color:inherit;text-decoration:none">insseption <b>API</b><span>{e(t['site'])}</span></a></div>
 <nav><a href="{guide}">{e(t['nav_guide'])}</a>
-<a href="/docs/reference">{e(t['nav_ref'])}</a>
+<a href="{ref}">{e(t['nav_ref'])}</a>
 <a href="/">{e(t['nav_chat'])}</a>
 <a href="{GITHUB}" target="_blank" rel="noopener">{e(t['nav_github'])}</a></nav>{switch}</header>
 <main>{body}</main>{scripts}</body></html>"""
@@ -252,11 +260,11 @@ def render(base: str, matrices: list[dict], sample: str, lang: str = "en") -> st
     for m in matrices[:400]:
         code = m.get("code") or ""
         name = m.get("name") or ""
-        meta = f"{base}/api/v1/matrices/{code}?lang=en"
+        meta = f"{base}/api/v1/matrices/{code}?lang={lang}"
         cat_rows.append(
             f"<tr><td><code>{e(code)}</code></td><td>{e(name)}</td>"
             f"<td class='small'>{link(meta, t['cat_about'])} · "
-            f"{link(base + '/api/v1/matrices/' + code + '/query?lang=en', 'query')}</td></tr>"
+            f"{link(base + '/api/v1/matrices/' + code + f'/query?lang={lang}', t['cat_query'])}</td></tr>"
         )
     cat_html = table(t["cat_head"], cat_rows, t["cat_empty"], cls="sortable catalogue")
 
@@ -278,7 +286,7 @@ def render(base: str, matrices: list[dict], sample: str, lang: str = "en") -> st
     err_html = table(
         t["err_head"],
         [
-            f"<tr><td class='num'>{c}</td><td>{title}</td>"
+            f"<tr><td class='num'>{c}</td><td>{title if lang == 'en' else I.ERROR_TITLES[c][lang]}</td>"
             f"<td>{w if lang == 'en' else I.ERRORS[c][lang]}</td></tr>"
             for c, title, w in C.ERRORS
         ],
@@ -299,7 +307,7 @@ def render(base: str, matrices: list[dict], sample: str, lang: str = "en") -> st
 <div class="hero"><h1>{e(t['h1'])}</h1>
 <p class="lead">{t['lead']}</p>
 <div class="base"><span class="muted small">{e(t['base_label'])}</span><code>{e(base)}</code>
-<a class="btn small" href="/docs/reference">{e(t['btn_ref'])}</a>
+<a class="btn small" href="{ref_path(lang)}">{e(t['btn_ref'])}</a>
 <a class="btn small" href="/">{e(t['nav_chat'])}</a></div>
 <div class="facts">
 <div class="card static"><b>{e(t['fact_open_b'])}</b><span>{e(t['fact_open'])}</span></div>
@@ -410,18 +418,20 @@ def docs_hu(request: Request):
     return guide(request, "hu")
 
 
-@router.get("/docs/reference", response_class=HTMLResponse)
-def reference(request: Request):
+def reference_page(request: Request, lang: str) -> HTMLResponse:
     schema_url = request.scope.get("root_path", "") + "/openapi.json"
-    lang = accepted(request)
     t = I.UI[lang]
-    body = (
-        f'<p class="muted small" style="max-width:900px">Every endpoint with its parameters. '
-        f'Explanations and examples are in the <a href="{page_path(lang)}">guide</a> '
-        f'(English, Română, Magyar).</p><div id="swagger-ui"></div>'
+    intro = fill(t["swagger_intro"], GUIDE=page_path(lang))
+    body = f'<p class="muted small" style="max-width:900px">{intro}</p><div id="swagger-ui"></div>'
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    root = request.scope.get("root_path", "")
+    alt = "".join(
+        f'<link rel="alternate" hreflang="{c}" href="https://{e(host)}{root}{ref_path(c)}">'
+        for c in I.LANGS
     )
+    alt += f'<link rel="alternate" hreflang="x-default" href="https://{e(host)}{root}/docs/reference">'
     head = (
-        f'<link rel="stylesheet" href="{SWAGGER}/swagger-ui.css"><style>'
+        f'{alt}<link rel="stylesheet" href="{SWAGGER}/swagger-ui.css"><style>'
         f"#swagger-ui {{ background:#F6F6F6; border-radius:20px; padding:4px 8px 20px; color:#06090D }}"
         f"#swagger-ui .topbar {{ display:none }} #swagger-ui .info {{ margin:24px 0 }}</style>"
     )
@@ -431,7 +441,37 @@ def reference(request: Request):
         f"docExpansion: 'list', defaultModelsExpandDepth: -1, tryItOutEnabled: true, "
         f"displayRequestDuration: true }});</script>"
     )
-    return shell(t["nav_ref"], body, lang=lang, guide=page_path(lang), extra_head=head, scripts=scripts)
+    return shell(
+        t["nav_ref"],
+        body,
+        lang=lang,
+        guide=page_path(lang),
+        kind="reference",
+        extra_head=head,
+        scripts=scripts,
+    )
+
+
+@router.api_route("/docs/reference", methods=["GET", "HEAD"], response_class=HTMLResponse)
+def reference_root(request: Request):
+    lang = accepted(request)
+    return RedirectResponse(ref_path(lang), status_code=302, headers={"Vary": "Accept-Language"})
+
+
+@router.get("/docs/en/reference", response_class=HTMLResponse)
+def reference_en(request: Request):
+    return reference_page(request, "en")
+
+
+@router.get("/docs/ro/reference", response_class=HTMLResponse)
+def reference_ro(request: Request):
+    return reference_page(request, "ro")
+
+
+@router.get("/docs/hu/reference", response_class=HTMLResponse)
+def reference_hu(request: Request):
+    return reference_page(request, "hu")
+
 
 
 def attach_openapi(app) -> None:

@@ -385,8 +385,8 @@ export async function mountChat() {
   const showWelcome = () => {
     msgs.innerHTML = "";
     const meta = fillTemplate(dict.welcome_meta, {
-      docs: dict.docs_path || "/docs",
-      ref: dict.ref_path || "/docs/reference",
+      docs: dict.docs_path || "/docs/en",
+      ref: dict.ref_path || "/docs/en/reference",
     });
     addMsg(
       "bot",

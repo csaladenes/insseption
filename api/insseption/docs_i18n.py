@@ -139,6 +139,13 @@ ERRORS = {404: {'ro': 'Cod de matrice necunoscut sau cale invalidă.',
  503: {'ro': 'Circuit amonte deschis, sau traducerea dezactivată (fără cheie OpenRouter).',
        'hu': 'Upstream kör megszakítva, vagy fordítás kikapcsolva (nincs OpenRouter kulcs).'}}
 
+ERROR_TITLES = {
+ 404: {'ro': 'Negăsit', 'hu': 'Nem található'},
+ 422: {'ro': 'Neprocesabil', 'hu': 'Feldolgozhatatlan'},
+ 502: {'ro': 'Gateway eronat', 'hu': 'Hibás átjáró'},
+ 503: {'ro': 'Indisponibil', 'hu': 'Nem elérhető'},
+}
+
 CHANGELOG = {'2026-10-23': {'ro': 'v0.1.0 — Tunel API JSON pentru TEMPO-Online, client Python, deploy Traefik '
                       'deploy Traefik, ghid trilingv.',
                 'hu': 'v0.1.0 — JSON API-alagút a TEMPO-Online-hoz, Python kliens, Traefik '
@@ -245,9 +252,12 @@ UI = {
  'cat_about': 'meta',
  'cat_empty': 'The list could not be loaded just now — try <code>/api/v1/context</code>.',
  'cat_head': ['Code', 'Name', ''],
- 'reference': '<p>Every endpoint. For Try-it-out open the <a href="/docs/reference">interactive '
+ 'reference': '<p>Every endpoint. For Try-it-out open the <a href="/docs/en/reference">interactive '
               'reference</a> (same OpenAPI as <code>/openapi.json</code>).</p>',
  'ref_head': ['Endpoint', 'Access', 'What it returns'],
+ 'swagger_intro': 'Every endpoint with its parameters. Explanations and examples are in the '
+                  '<a href="[[GUIDE]]">guide</a> (English, Română, Magyar).',
+ 'cat_query': 'query',
  'eg': 'e.g.',
  'badge_open': 'open',
  'errors': '<p>Errors come as JSON with a single shape: <code>{"error": {"code", "message", '
@@ -381,17 +391,20 @@ UI["ro"] = {'html_title': 'Ghid',
  'filter_label': 'Filtrați catalogul',
  'cat_about': 'meta',
  'cat_empty': 'Lista nu a putut fi încărcată acum — încercați <code>/api/v1/context</code>.',
- 'cat_head': ['Code', 'Name', ''],
+ 'cat_head': ['Cod', 'Denumire', ''],
  'reference': '<p>Fiecare endpoint. Pentru Try-it-out deschideți <a '
-              'href="/docs/reference">referința interactivă</a> (același OpenAPI ca '
+              'href="/docs/ro/reference">referința interactivă</a> (același OpenAPI ca '
               '<code>/openapi.json</code>).</p>',
- 'ref_head': ['Endpoint', 'Access', 'What it returns'],
+ 'ref_head': ['Endpoint', 'Acces', 'Ce returnează'],
+ 'swagger_intro': 'Fiecare endpoint cu parametrii săi. Explicații și exemple în '
+                  '<a href="[[GUIDE]]">ghid</a> (English, Română, Magyar).',
+ 'cat_query': 'query',
  'eg': 'ex.',
  'badge_open': 'deschis',
  'errors': '<p>Erorile vin ca JSON într-o singură formă: <code>{"error": {"code", "message", '
            '"upstream_status?"}}</code>. O cerere greșită spune ce e greșit în '
            '<code>message</code>.</p>',
- 'err_head': ['Status', '', 'When'],
+ 'err_head': ['Status', '', 'Când'],
  'h_formats': 'Formate',
  'formats': '<p>JSON este UTF-8, indentat pentru browsere (<code>application/json</code>). '
             'Interogările acceptă <code>?format=csv</code> pentru CSV UTF-8 cu antet (separator '
@@ -518,16 +531,19 @@ UI["hu"] = {'html_title': 'Útmutató',
  'filter_label': 'Katalógusszűrő',
  'cat_about': 'meta',
  'cat_empty': 'A lista most nem tölthető be — próbálja: <code>/api/v1/context</code>.',
- 'cat_head': ['Code', 'Name', ''],
- 'reference': '<p>Minden végpont. Kipróbáláshoz: <a href="/docs/reference">interaktív '
+ 'cat_head': ['Kód', 'Név', ''],
+ 'reference': '<p>Minden végpont. Kipróbáláshoz: <a href="/docs/hu/reference">interaktív '
               'referencia</a> (ugyanaz az OpenAPI, mint a <code>/openapi.json</code>).</p>',
- 'ref_head': ['Endpoint', 'Access', 'What it returns'],
+ 'ref_head': ['Végpont', 'Hozzáférés', 'Mit ad vissza'],
+ 'swagger_intro': 'Minden végpont a paramétereivel. Magyarázatok és példák az '
+                  '<a href="[[GUIDE]]">útmutatóban</a> (English, Română, Magyar).',
+ 'cat_query': 'query',
  'eg': 'pl.',
  'badge_open': 'nyílt',
  'errors': '<p>A hibák egyetlen JSON-alakban jönnek: <code>{"error": {"code", "message", '
            '"upstream_status?"}}</code>. Hibás kérésnél a <code>message</code> megmondja, mi a '
            'baj.</p>',
- 'err_head': ['Status', '', 'When'],
+ 'err_head': ['Státusz', '', 'Mikor'],
  'h_formats': 'Formátumok',
  'formats': '<p>A JSON UTF-8, böngészőhöz behúzva (<code>application/json</code>). A lekérdezések '
             'elfogadják a <code>?format=csv</code> paramétert (UTF-8 CSV, fejlécsor, tizedespont). '
