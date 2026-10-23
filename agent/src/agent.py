@@ -24,23 +24,23 @@ CODE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{2,19}$")
 # Master contract for every LLM call in this agent.
 MASTER_PIPELINE = """
 You are the insseption TEMPO agent for Romania INSSE statistics.
-Always follow this pipeline, in order — never skip or reorder:
+Internal pipeline (never describe these steps to the end user):
 
-Step 1 — TRANSLATE: Turn the human question into a TEMPO database query.
-  Find the correct matrix/dataset code(s) (e.g. POP105A, FOM104F) and
-  dimension selections (territory, year, sex, NACE, …). Prefer catalogue
-  codes; never invent matrix codes.
+Step 0 — PREFLIGHT: Start from a default plan, then revise it if needed
+  (wrong matrix family, user-named code ignored, county map needs different
+  dataset/selections, lang mismatch). Prefer catalogue codes; never invent codes.
 
-Step 2 — RETURN QUERY: Emit the structured DB query
-  {matrix, lang, selections, note} so the caller can see exactly what will run.
+Step 1 — TRANSLATE: Turn the human question into a TEMPO database query
+  {matrix, lang, selections, note}.
 
-Step 3 — ANALYZE: After real data returns, clean and reformat it
-  (drop junk rows, parse European numbers, normalize labels/units), then
-  interpret only those cleaned values. Never invent numbers.
+Step 2 — RETURN QUERY: Keep the structured DB query for the runtime
+  (do not narrate step numbers or "pipeline" in user-facing HTML).
 
-Step 4 — PRESENT: Use predefined skills for table + chart
-  (bar / line / Romania county choropleth). The runtime builds charts/tables;
-  your HTML summary must cite the matrix code and stay consistent with the table.
+Step 3 — ANALYZE: After real data returns, clean/reformat, then interpret
+  only those values. Never invent numbers.
+
+Step 4 — PRESENT: Table + chart via predefined skills (bar / line / county map).
+  User-facing HTML: concise answer only — no step lists, no "preflight" talk.
 """.strip()
 
 
@@ -75,8 +75,9 @@ class TempoAgent:
             return []
 
     async def query(self, user_query: str, generate_chart: bool = True) -> dict[str, Any]:
-        # Step 1+2: translate human → DB query and return it
+        # Default plan draft, then Step 0 PREFLIGHT revise if needed
         plan = await self._plan(user_query)
+        plan = await self._preflight(user_query, plan)
         matrix = (plan.get("matrix") or "").strip().upper()
         lang = plan.get("lang") if plan.get("lang") in ("ro", "en") else "en"
         selections = (
@@ -88,6 +89,7 @@ class TempoAgent:
             "selections": selections,
             "note": plan.get("note"),
             "endpoint": f"POST /api/v1/matrices/{matrix}/query" if matrix else None,
+            "preflight": plan.get("preflight"),
         }
 
         data: dict[str, Any] | None = None
@@ -319,11 +321,11 @@ class TempoAgent:
         return "\n".join(f"{r['code']}\t{r.get('name','')}" for r in picks)
 
     async def _plan(self, user_query: str) -> dict[str, Any]:
-        """Steps 1–2: translate question → TEMPO DB query JSON."""
+        """Step 1: default TEMPO DB query plan (before preflight revise)."""
         catalog = self._catalog_snippet(user_query)
         system = (
             f"{MASTER_PIPELINE}\n\n"
-            "You are executing Steps 1 and 2 only.\n"
+            "You are drafting the default plan (Step 1). Preflight will revise it next.\n"
             "Translate the human question into a TEMPO DB query.\n"
             "Return ONLY a JSON object with keys:\n"
             "  matrix — TEMPO dataset code (e.g. POP105A, FOM104F) or null if unknown,\n"
@@ -356,6 +358,99 @@ class TempoAgent:
                 "note": f"Could not parse plan: {raw[:160]}",
             }
 
+    async def _preflight(self, user_query: str, plan: dict[str, Any]) -> dict[str, Any]:
+        """Step 0: revise the default plan when the first pick looks wrong."""
+        catalog = self._catalog_snippet(user_query, limit=30)
+        matrix = (plan.get("matrix") or "").strip().upper()
+        lang = plan.get("lang") if plan.get("lang") in ("ro", "en") else "en"
+        meta_summary: dict[str, Any] | None = None
+        if matrix and CODE_RE.match(matrix):
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    resp = await client.get(
+                        f"{self.insse}/matrices/{matrix}", params={"lang": lang}
+                    )
+                    if resp.status_code < 400:
+                        meta = resp.json()
+                        dims = []
+                        for d in (meta.get("dimensions") or [])[:12]:
+                            if not isinstance(d, dict):
+                                continue
+                            dims.append(
+                                {
+                                    "id": d.get("id") or d.get("dimensionId"),
+                                    "name": d.get("name") or d.get("label"),
+                                    "options": len(d.get("options") or d.get("items") or []),
+                                }
+                            )
+                        meta_summary = {
+                            "code": matrix,
+                            "name": meta.get("name"),
+                            "dimensions": dims,
+                        }
+            except httpx.HTTPError:
+                meta_summary = {"code": matrix, "error": "meta fetch failed"}
+
+        system = (
+            f"{MASTER_PIPELINE}\n\n"
+            "You are executing Step 0 — PREFLIGHT only.\n"
+            "You receive a default plan. Revise it if necessary; otherwise keep it.\n"
+            "Return ONLY JSON with keys:\n"
+            "  matrix, lang, selections, note,\n"
+            "  preflight — object {revised: bool, reason: short string}.\n"
+            "Revise when:\n"
+            "- User named a different matrix code than the default.\n"
+            "- Question is county/județ/map but matrix is not county-capable "
+            "(prefer FOM104F for average employees by county).\n"
+            "- Matrix is null/unknown but catalogue has a clear better match.\n"
+            "- Language should follow the question.\n"
+            "Never invent matrix codes. Keep selections as {} unless you know "
+            "exact nomItemId ints from context. Do not mention steps to users."
+        )
+        user = json.dumps(
+            {
+                "question": user_query,
+                "default_plan": plan,
+                "matrix_meta": meta_summary,
+                "catalogue_candidates": catalog,
+            },
+            ensure_ascii=False,
+        )
+        raw = await self._chat(system, user)
+        try:
+            if not raw.startswith("{"):
+                start, end = raw.find("{"), raw.rfind("}")
+                if start >= 0 and end > start:
+                    raw = raw[start : end + 1]
+            revised = json.loads(raw)
+            if not isinstance(revised, dict):
+                raise ValueError("not an object")
+        except Exception:
+            out = dict(plan)
+            out["preflight"] = {
+                "revised": False,
+                "reason": f"preflight parse failed; keeping default ({raw[:120]})",
+            }
+            return out
+
+        out = {
+            "matrix": revised.get("matrix", plan.get("matrix")),
+            "lang": revised.get("lang", plan.get("lang")),
+            "selections": revised.get("selections", plan.get("selections")) or {},
+            "note": revised.get("note", plan.get("note")),
+            "preflight": revised.get("preflight")
+            if isinstance(revised.get("preflight"), dict)
+            else {
+                "revised": (revised.get("matrix") or "") != (plan.get("matrix") or ""),
+                "reason": "preflight completed",
+            },
+        }
+        if out["lang"] not in ("ro", "en"):
+            out["lang"] = lang
+        if not isinstance(out["selections"], dict):
+            out["selections"] = {}
+        return out
+
     async def _answer(
         self,
         user_query: str,
@@ -381,29 +476,18 @@ class TempoAgent:
         }
         system = (
             f"{MASTER_PIPELINE}\n\n"
-            "You are executing Steps 3 and 4 (narrative only).\n"
-            "The DB query already ran; charts/tables are built by the presentation skill.\n"
+            "Write the user-facing answer only (after analyze/present).\n"
+            "Charts/tables are built by the presentation skill — do not explain the pipeline.\n"
             "Return ONLY clean HTML fragments (p, h3, ul, li, strong, table, code) — "
             "no html/body/script tags.\n"
-            "Structure the answer as:\n"
-            "  1) A short line stating the DB query used "
-            "(matrix code + what was selected),\n"
-            "  2) Analysis of the cleaned numbers (trends, highs/lows, units),\n"
-            "  3) If errored/empty: say so and suggest a matrix code — do not invent values.\n"
-            "Answer in the same language as the question. Cite the matrix code. "
-            "Do not invent numbers; use only sample_rows / presentation_table."
+            "Rules:\n"
+            "- Answer in the same language as the question.\n"
+            "- Summarise the cleaned numbers; cite the matrix code inline when useful.\n"
+            "- If errored/empty: say so and suggest a matrix code — do not invent values.\n"
+            "- Never mention steps, preflight, pipeline, or internal planning.\n"
+            "- Do not invent numbers; use only sample_rows / presentation_table."
         )
         raw = await self._chat(system, json.dumps(payload, ensure_ascii=False))
         if not raw.startswith("<"):
             raw = f"<p>{raw}</p>"
-        # Always surface the query block for step 2 visibility
-        mq = db_query.get("matrix") or "?"
-        note = (db_query.get("note") or "").strip()
-        query_block = (
-            f'<p class="insse-chat-query"><strong>Query</strong> · '
-            f"<code>{mq}</code>"
-            f"{(' — ' + note) if note else ''}</p>"
-        )
-        if "insse-chat-query" not in raw:
-            raw = query_block + raw
         return raw
