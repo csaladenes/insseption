@@ -269,7 +269,7 @@ export function mountChat() {
 
   addMsg(
     "bot",
-    `<p>Ask TEMPO in RO / EN / HU. I’ll pick a matrix, pull numbers from this API, and draw a chart or county map when it helps.</p>
+    `<p>Ask TEMPO in RO / EN / HU. Pipeline: <strong>1</strong> find dataset codes → <strong>2</strong> return the DB query → <strong>3</strong> clean/analyze → <strong>4</strong> table + chart.</p>
      <ul>${EXAMPLES.map(
        (e) =>
          `<li><button type="button" class="insse-chat-ex">${e}</button></li>`
@@ -293,7 +293,7 @@ export function mountChat() {
     send.textContent = "…";
     const thinking = el("div", {
       className: "insse-chat-msg bot pending",
-      text: "Querying TEMPO…",
+      text: "1·translate → 2·query → 3·analyze → 4·present…",
     });
     msgs.appendChild(thinking);
     msgs.scrollTop = msgs.scrollHeight;
@@ -321,7 +321,14 @@ export function mountChat() {
         );
       } else {
         let html = data.answer || "<p>(empty answer)</p>";
-        if (data.matrix) {
+        const dq = data.db_query || data.plan;
+        if (dq && !html.includes("insse-chat-query")) {
+          const code = dq.matrix || data.matrix || "?";
+          const note = dq.note ? ` — ${String(dq.note).replace(/</g, "&lt;")}` : "";
+          html =
+            `<p class="insse-chat-query"><strong>Query</strong> · <code>${code}</code>${note}</p>` +
+            html;
+        } else if (data.matrix && !html.includes(data.matrix)) {
           html += `<p class="insse-chat-meta"><code>${data.matrix}</code></p>`;
         }
         await addMsg("bot", html, data);

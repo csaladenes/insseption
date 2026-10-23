@@ -74,3 +74,4 @@ main.chat-main { padding:24px 28px 48px; max-width:960px; margin:0 auto }
   main.chat-main { padding:16px }
   .insse-chat-form { grid-template-columns:1fr }
 }
+.insse-chat-query{font-size:.92rem;color:var(--muted,#8b9bb4);margin:.2rem 0 .6rem;}

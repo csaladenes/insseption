@@ -54,6 +54,7 @@ class QueryResponse(BaseModel):
     chart: Optional[dict] = None
     table: Optional[dict] = None
     plan: Optional[dict] = None
+    db_query: Optional[dict] = None
     matrix: Optional[str] = None
     columns: Optional[list] = None
     data: Optional[list] = None
