@@ -185,6 +185,18 @@ class TempoAgent:
                     "reason": (plan["preflight"].get("reason") or "")
                     + f" Switched to {matrix} to cover the requested years.",
                 }
+        # Knowledge bank: deterministic topic→matrix override (AFTER year-range fallback)
+        kb_topics = (self.knowledge or {}).get("topic_hints") or {}
+        ql_lower = user_query.lower()
+        for topic, hint in kb_topics.items():
+            kws = hint.get("keywords") or []
+            if any(k in ql_lower for k in kws):
+                kb_code = hint.get("matrix")
+                if kb_code and kb_code != matrix:
+                    matrix = kb_code
+                    plan["matrix"] = matrix
+                    plan["note"] = f"kb:{topic}"
+                    break
         data_lang = plan.get("lang") if plan.get("lang") in ("ro", "en") else "en"
         selections = (
             plan.get("selections") if isinstance(plan.get("selections"), dict) else {}
@@ -521,6 +533,25 @@ class TempoAgent:
                     hit = next((r for r in self.catalog if r.get("code") == code), None)
                     if hit:
                         picks.insert(0, hit)
+        # Explicit topic boosts for common domains
+        if any(k in ql for k in ("inflation", "inflație", "infláció", "consumer price", "prețuri", "preturi", "price index")):
+            for code in ("IPC101A",):
+                if not any(p.get("code") == code for p in picks):
+                    hit = next((r for r in self.catalog if r.get("code") == code), None)
+                    if hit:
+                        picks.insert(0, hit)
+        if any(k in ql for k in ("unemployment", "șomaj", "somaj", "munkanélk", "unemployment rate")):
+            for code in ("SOM103A",):
+                if not any(p.get("code") == code for p in picks):
+                    hit = next((r for r in self.catalog if r.get("code") == code), None)
+                    if hit:
+                        picks.insert(0, hit)
+        if any(k in ql for k in ("earnings", "salarii", "câștig", "castig", "fizet", "bér", "wage", "kereset")):
+            for code in ("FOM106E", "FOM106A"):
+                if not any(p.get("code") == code for p in picks):
+                    hit = next((r for r in self.catalog if r.get("code") == code), None)
+                    if hit:
+                        picks.insert(0, hit)
         # Knowledge bank topic hints
         kb_topics = (self.knowledge or {}).get("topic_hints") or {}
         for topic, hint in kb_topics.items():
@@ -591,7 +622,7 @@ class TempoAgent:
             "  chart_hint — optional 'line'|'bar'|'map'|null.\n"
             "Rules:\n"
             "- Prefer catalogue codes. Never invent codes.\n"
-            "- Use matrix_year_ranges to pick a code that covers the requested time period.\n"
+            "- ALWAYS match the topic first (inflation, unemployment, dwellings, population, etc.) — use the topic from the question to pick the right matrix family. Use matrix_year_ranges only to choose between matrices covering the SAME topic.\n"
             "- If the question mentions specific years, pick a matrix whose year_range covers them.\n"
             "- For population over time / year ranges, prefer POP105A and chart_hint=line.\n"
             "- For average employees by county, prefer FOM104F and chart_hint=map.\n"

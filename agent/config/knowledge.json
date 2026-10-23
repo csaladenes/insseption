@@ -802,7 +802,8 @@
     "népesség",
     "lakónépesség",
     "resident",
-    "rezident"
+    "rezident",
+    "locuitor"
    ]
   },
   "population_legal": {
@@ -811,24 +812,9 @@
     "legally resident",
     "populatie legala",
     "domiciliu",
-    "legal population"
+    "legal population",
+    "rezident legal"
    ]
-  },
-  "population_1990s": {
-   "matrix": "POP107A",
-   "keywords": [
-    "1990",
-    "1991",
-    "1992",
-    "1993",
-    "1994",
-    "1995",
-    "1996",
-    "1997",
-    "1998",
-    "1999"
-   ],
-   "note": "POP105A starts 2003; POP107A covers 1992+"
   },
   "births": {
    "matrix": "POP201A",

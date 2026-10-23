@@ -3454,5 +3454,17 @@
  {
   "code": "LOC105A",
   "name": "Built up of finished dwelling by financing sources, urban/ rural area, macroregions, development regions and counties"
+ },
+ {
+  "code": "IPC101A",
+  "name": "Monthly average inflation rate by purchased categories of goods and services "
+ },
+ {
+  "code": "TUR102A",
+  "name": "Existing touristic accommodation capacity by type of establishment and type of ownership"
+ },
+ {
+  "code": "TRN102A",
+  "name": "New registrations of road vehicles for passenger transport, by macroregions, development regions and counties"
  }
 ]
