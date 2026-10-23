@@ -2,7 +2,7 @@
 
 from .client import DEFAULT_BASE_URL, Client, InsseClient, InsseptionError
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = [
     "Client",
     "InsseClient",
