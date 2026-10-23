@@ -13,12 +13,10 @@ Production target: **https://insse.csaladen.es** (ROEM AWS / Traefik)
 
 ## Python client
 
-Not on PyPI yet — install from GitHub (or a local checkout):
-
 ```bash
-pip install "git+https://github.com/csaladenes/insseption.git"
-# or, from a clone:
-pip install .
+pip install insseption
+# or from source / GitHub:
+# pip install "git+https://github.com/csaladenes/insseption.git"
 ```
 
 ```python

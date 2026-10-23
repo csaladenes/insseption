@@ -238,14 +238,13 @@ in
     {
         "id": "package",
         "title": "Use the Python package",
-        "lead": 'The same calls without hand-written URLs: <code>pip install '
-                '"git+https://github.com/csaladenes/insseption.git"</code> (or '
+        "lead": 'The same calls without hand-written URLs: <code>pip install insseption</code> (or '
                 'install from this repo). The <code>Client</code> mirrors every HTTP route and returns '
                 'parsed JSON.',
         "url": "/api/v1/meta",
         "code": {
             "curl": '# the package wraps these HTTP calls\ncurl -sS "{BASE}/api/v1/meta" | jq .',
-            "python": '''# pip install "git+https://github.com/csaladenes/insseption.git"
+            "python": '''# pip install insseption
 from insseption import Client
 
 c = Client("{BASE}/api/v1")

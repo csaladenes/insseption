@@ -264,7 +264,7 @@ def create_app() -> FastAPI:
             "base": "/api/v1",
             "docs": "/docs",
             "openapi": "/openapi.json",
-            "python_client": 'pip install "git+https://github.com/csaladenes/insseption.git"',
+            "python_client": "pip install insseption",
             "endpoints": ENDPOINTS,
             "attribution": config.ATTRIBUTION,
             "terms_url": config.TERMS_URL,
