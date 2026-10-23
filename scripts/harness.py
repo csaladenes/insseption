@@ -74,8 +74,8 @@ def test_api() -> None:
     check("health status", st == 200 and health.get("ok") is True, str(health))
     check("upstream", health.get("upstream_ok") is True)
 
-    st, root, _ = call("GET", "/")
-    check("service root", st == 200 and root.get("name") == "insseption", root.get("version"))
+    st, root, _ = call("GET", "/api")
+    check("api discovery", st == 200 and root.get("name") == "insseption", root.get("version"))
 
     st, meta, _ = call("GET", "/api/v1/meta")
     check("meta", st == 200 and meta.get("version"), meta.get("version"))
@@ -118,8 +118,9 @@ def test_docs_and_static() -> None:
     st, js, ctype = call("GET", "/chat.js", accept="*/*", expect_json=False)
     check("chat.js", st == 200 and b"chat" in js.lower(), f"{len(js)} bytes")
 
-    st, idx, _ = call("GET", "/index.html", accept="text/html", expect_json=False)
-    check("index.html", st == 200 and b"insseption" in idx.lower())
+    st, idx, ctype = call("GET", "/", accept="text/html", expect_json=False)
+    text = idx.decode("utf-8", errors="replace").lower()
+    check("chat home", st == 200 and "text/html" in ctype and "insse-chat-mount" in text)
 
 
 def test_agent() -> None:

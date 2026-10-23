@@ -18,6 +18,6 @@ OPENROUTER_BASE_URL = os.environ.get(
     "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
 ).rstrip("/")
 OPENROUTER_MODEL = os.environ.get(
-    "OPENROUTER_MODEL", "openai/gpt-4.1-nano"
+    "OPENROUTER_MODEL", "deepseek/deepseek-v4.1-flash"
 )
 MATRIX_CODE_RE = r"^[A-Za-z0-9_]{3,20}$"

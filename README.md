@@ -5,7 +5,7 @@ JSON API + Python client for [INSSE TEMPO-Online](http://statistici.insse.ro:807
 
 - **HTTP JSON API** — open `/api/v1/...` in a browser; responses are indented `application/json`
 - **Python package** — `from insseption import Client`
-- **UI** — optional static frontend under `/` when deployed with nginx
+- **UI** — chat-first front page at `/` (Ask TEMPO agent); JSON discovery at `/api`
 
 Production target: **https://insse.csaladen.es** (ROEM AWS / Traefik)
 

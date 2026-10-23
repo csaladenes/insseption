@@ -16,7 +16,7 @@
     environment:
       - INSSEPTION_API_URL=http://insseption:8787/api/v1
       - CATALOG_PATH=/app/config/catalog.json
-      - LLM_MODEL=openai/gpt-4.1-nano
+      - LLM_MODEL=deepseek/deepseek-v4.1-flash
       - OPENROUTER_REFERRER=https://insse.csaladen.es
       - OPENROUTER_TITLE=insseption agent
     mem_limit: 384m

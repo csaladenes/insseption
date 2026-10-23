@@ -254,8 +254,7 @@ def create_app() -> FastAPI:
     app.include_router(docs.router)
     docs.attach_openapi(app)
 
-    @app.get("/", response_class=ApiJSONResponse)
-    async def root():
+    def _service_root():
         return {
             "name": "insseption",
             "version": config.VERSION,
@@ -263,6 +262,7 @@ def create_app() -> FastAPI:
             "content_type": "application/json",
             "base": "/api/v1",
             "docs": "/docs",
+            "ui": "/",
             "openapi": "/openapi.json",
             "python_client": "pip install insseption",
             "pypi": "https://pypi.org/project/insseption/",
@@ -275,9 +275,8 @@ def create_app() -> FastAPI:
     @app.get("/api/v1", response_class=ApiJSONResponse)
     async def api_index():
         return {
-            "base": "/api/v1",
+            **_service_root(),
             "endpoints": ENDPOINTS,
-            "attribution": config.ATTRIBUTION,
         }
 
     @app.middleware("http")
@@ -330,11 +329,17 @@ def create_app() -> FastAPI:
         )
 
     static_dir = os.environ.get("INSSEPTION_STATIC_DIR", "").strip()
+    mounted = False
     if static_dir:
         root = FsPath(static_dir)
         if root.is_dir():
-            # API routes already registered; UI at /
+            # Chat UI is the front page; JSON discovery stays under /api
             app.mount("/", StaticFiles(directory=str(root), html=True), name="ui")
+            mounted = True
+    if not mounted:
+        @app.get("/", response_class=ApiJSONResponse)
+        async def root():
+            return _service_root()
 
     return app
 

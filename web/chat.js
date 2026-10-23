@@ -1,6 +1,6 @@
 /**
- * Floating chat widget → insseption agent (GEM-style /api/query).
- * Served under Traefik PathPrefixStrip:/agent → http://insseption-agent:8000
+ * Full-page TEMPO chat (the site front page).
+ * Agent: ${origin}/agent → insseption-agent
  */
 const AGENT_BASE =
   (typeof window !== "undefined" && window.INSSEPTION_AGENT_BASE) ||
@@ -11,12 +11,15 @@ function el(tag, attrs = {}, children = []) {
   for (const [k, v] of Object.entries(attrs)) {
     if (k === "className") node.className = v;
     else if (k === "text") node.textContent = v;
-    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k.startsWith("on") && typeof v === "function")
+      node.addEventListener(k.slice(2).toLowerCase(), v);
     else if (v != null) node.setAttribute(k, v);
   }
   for (const child of [].concat(children)) {
     if (child == null) continue;
-    node.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
+    node.appendChild(
+      typeof child === "string" ? document.createTextNode(child) : child
+    );
   }
   return node;
 }
@@ -35,48 +38,43 @@ const EXAMPLES = [
 ];
 
 export function mountChat() {
+  const mount =
+    document.getElementById("insse-chat-mount") || document.body;
   if (document.getElementById("insse-chat-root")) return;
 
-  const root = el("div", { id: "insse-chat-root", className: "insse-chat" });
-  const fab = el("button", {
-    type: "button",
-    className: "insse-chat-fab",
-    "aria-label": "Open insseption assistant",
-    title: "Ask TEMPO",
-    text: "✦",
-  });
+  const root = el("div", { id: "insse-chat-root", className: "insse-chat page" });
   const panel = el("div", {
     className: "insse-chat-panel",
-    hidden: "true",
-    role: "dialog",
+    role: "main",
     "aria-label": "insseption assistant",
   });
 
   const head = el("div", { className: "insse-chat-head" }, [
     el("div", {}, [
       el("strong", { text: "Ask TEMPO" }),
-      el("span", { className: "insse-chat-sub", text: "insseption agent" }),
+      el("span", {
+        className: "insse-chat-sub",
+        text: "Natural language → INSSE matrices + charts",
+      }),
     ]),
-    el("button", {
-      type: "button",
-      className: "insse-chat-close",
-      "aria-label": "Close",
-      text: "×",
-    }),
   ]);
 
-  const msgs = el("div", { className: "insse-chat-msgs", "aria-live": "polite" });
+  const msgs = el("div", {
+    className: "insse-chat-msgs",
+    "aria-live": "polite",
+  });
   const form = el("form", { className: "insse-chat-form" });
   const input = el("textarea", {
-    rows: "2",
-    placeholder: "Ask about Romanian statistics…",
+    rows: "3",
+    placeholder: "Ask about Romanian statistics in RO / EN / HU…",
     maxlength: "2000",
+    autofocus: "true",
   });
   const send = el("button", { type: "submit", className: "btn", text: "Ask" });
   form.append(input, send);
   panel.append(head, msgs, form);
-  root.append(fab, panel);
-  document.body.appendChild(root);
+  root.append(panel);
+  mount.appendChild(root);
 
   const addMsg = (role, html, chartCfg) => {
     const bubble = el("div", { className: `insse-chat-msg ${role}` });
@@ -90,7 +88,7 @@ export function mountChat() {
         // eslint-disable-next-line no-new
         new window.Chart(canvas.getContext("2d"), chartCfg.config);
       } catch (_) {
-        /* ignore chart errors */
+        /* ignore */
       }
     }
     msgs.appendChild(bubble);
@@ -99,8 +97,12 @@ export function mountChat() {
 
   addMsg(
     "bot",
-    `<p>Hi — ask in RO / EN / HU. I query <code>insse.csaladen.es</code> TEMPO matrices and can sketch a chart.</p>
-     <ul>${EXAMPLES.map((e) => `<li><button type="button" class="insse-chat-ex">${e}</button></li>`).join("")}</ul>`
+    `<p>Hi — this <em>is</em> the front page. Ask TEMPO in RO / EN / HU; I’ll pick a matrix, pull numbers from <code>insse.csaladen.es</code>, and sketch a chart when it helps.</p>
+     <ul>${EXAMPLES.map(
+       (e) =>
+         `<li><button type="button" class="insse-chat-ex">${e}</button></li>`
+     ).join("")}</ul>
+     <p class="insse-chat-meta">Need the raw JSON API? Open <a href="/docs" target="_blank" rel="noreferrer">/docs</a>.</p>`
   );
   msgs.querySelectorAll(".insse-chat-ex").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -108,20 +110,6 @@ export function mountChat() {
       input.focus();
     });
   });
-
-  const setOpen = (open) => {
-    if (open) {
-      panel.removeAttribute("hidden");
-      fab.setAttribute("aria-expanded", "true");
-      input.focus();
-    } else {
-      panel.setAttribute("hidden", "true");
-      fab.setAttribute("aria-expanded", "false");
-    }
-  };
-
-  fab.addEventListener("click", () => setOpen(panel.hasAttribute("hidden")));
-  head.querySelector(".insse-chat-close").addEventListener("click", () => setOpen(false));
 
   form.addEventListener("submit", async (ev) => {
     ev.preventDefault();
@@ -146,9 +134,19 @@ export function mountChat() {
       const data = await res.json();
       thinking.remove();
       if (!res.ok) {
-        addMsg("bot", `<p>Agent error: ${(data.detail || res.statusText || "").toString()}</p>`);
+        addMsg(
+          "bot",
+          `<p>Agent error: ${(
+            data.detail ||
+            res.statusText ||
+            ""
+          ).toString()}</p>`
+        );
       } else if (data.error && !data.answer) {
-        addMsg("bot", `<p>${String(data.error).replace(/</g, "&lt;")}</p>`);
+        addMsg(
+          "bot",
+          `<p>${String(data.error).replace(/</g, "&lt;")}</p>`
+        );
       } else {
         let html = data.answer || "<p>(empty answer)</p>";
         if (data.matrix) {
@@ -158,12 +156,25 @@ export function mountChat() {
       }
     } catch (err) {
       thinking.remove();
-      addMsg("bot", `<p>Network error: ${String(err.message || err)}</p>`);
+      addMsg(
+        "bot",
+        `<p>Network error: ${String(err.message || err)}</p>`
+      );
     } finally {
       send.disabled = false;
       send.textContent = "Ask";
+      input.focus();
     }
   });
+
+  // Enter to send, Shift+Enter for newline
+  input.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" && !ev.shiftKey) {
+      ev.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  input.focus();
 }
 
 if (document.readyState === "loading") {

@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-MODEL = "openai/gpt-4.1-nano"
+MODEL = "deepseek/deepseek-v4.1-flash"
 CODE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{2,19}$")
 
 
