@@ -1,6 +1,6 @@
 """
-insseption agent service — GEM portal-agent shape for TEMPO NL queries.
-Public path (Traefik 1.7): Host:insse.csaladen.es;PathPrefixStrip:/agent
+insseption agent service — TEMPO NL queries.
+Public path: /agent/* (reverse-proxied by the API container).
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ except ImportError:
 
 load_dotenv()
 
-app = FastAPI(title="insseption agent", version="0.1.0")
+app = FastAPI(title="insseption agent", version="0.1.1")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -91,7 +91,7 @@ async def health():
 async def root():
     return {
         "service": "insseption agent",
-        "version": "0.1.0",
+        "version": "0.1.1",
         "endpoints": {"query": "POST /api/query", "health": "GET /health"},
         "example": {
             "query": "What is Romania's usually resident population?",

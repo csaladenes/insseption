@@ -128,9 +128,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-!netlify/functions/api.mjs
-!netlify/functions/api.py
-.netlify/
-
-netlify/functions/*
-!netlify/functions/api.mjs
+*.pyc
+web/.DS_Store

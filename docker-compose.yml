@@ -1,11 +1,8 @@
 # Reference / local-only compose.
-# Production is integrated into the ROEM host stack:
-#   /home/ec2-user/covid19-romania/docker-compose.yml  (service: insseption)
-#   Host rule: insse.csaladen.es via Traefik 1.7
+# Production is integrated into the host Traefik stack at insse.csaladen.es
+# (service names: insseption, insseption-agent).
 #
-# On ROEM:
-#   cd /home/ec2-user/covid19-romania
-#   docker-compose up -d --build --no-deps insseption
+#   docker-compose up -d --build
 
 version: "2.4"
 
@@ -19,5 +16,22 @@ services:
       - .env
     environment:
       INSSEPTION_STATIC_DIR: /app/web
+      OPENROUTER_MODEL: deepseek/deepseek-v4.1-flash
+      INSSEPTION_AGENT_URL: http://insseption-agent:8000
     volumes:
       - ./web:/app/web:ro
+    depends_on:
+      - insseption-agent
+
+  insseption-agent:
+    build: ./agent
+    image: insseption-agent:local
+    env_file:
+      - .env
+    environment:
+      INSSEPTION_API_URL: http://insseption:8787/api/v1
+      LLM_MODEL: deepseek/deepseek-v4.1-flash
+      CATALOG_PATH: /app/config/catalog.json
+    volumes:
+      - ./agent/src:/app/src:ro
+      - ./agent/config:/app/config:ro

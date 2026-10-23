@@ -140,8 +140,8 @@ ERRORS = {404: {'ro': 'Cod de matrice necunoscut sau cale invalidă.',
        'hu': 'Upstream kör megszakítva, vagy fordítás kikapcsolva (nincs OpenRouter kulcs).'}}
 
 CHANGELOG = {'2026-10-23': {'ro': 'v0.1.0 — Tunel API JSON pentru TEMPO-Online, client Python, deploy Traefik '
-                      'ROEM, ghid trilingv.',
-                'hu': 'v0.1.0 — JSON API-alagút a TEMPO-Online-hoz, Python kliens, ROEM Traefik '
+                      'deploy Traefik, ghid trilingv.',
+                'hu': 'v0.1.0 — JSON API-alagút a TEMPO-Online-hoz, Python kliens, Traefik '
                       'telepítés, háromnyelvű útmutató.'}}
 
 COMMENTS = {'// Power Query > Blank Query > Advanced Editor': {'ro': '// Power Query > Blank Query > Advanced '

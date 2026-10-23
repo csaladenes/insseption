@@ -1,6 +1,5 @@
-# Snippet merged into ~/covid19-romania/docker-compose.yml on ROEM.
-# Agent stays on the internal docker network; the insseption API reverse-proxies
-#   https://insse.csaladen.es/agent/*  →  http://insseption-agent:8000/*
+# Snippet for the production compose file (host Traefik stack).
+# The API reverse-proxies /agent/*; agent stays on the internal network.
 
   insseption-agent:
     build: ./insseption/agent

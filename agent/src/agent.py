@@ -1,7 +1,6 @@
 """
 Natural-language → insseption TEMPO API → HTML answer (+ optional Chart.js).
-Mirrors the GEM portal-agent shape, but talks HTTP to the JSON tunnel
-instead of SQLite.
+Natural-language agent that talks HTTP to the insseption JSON tunnel.
 """
 
 from __future__ import annotations

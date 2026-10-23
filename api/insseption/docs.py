@@ -1,4 +1,4 @@
-"""/docs — ROEM-style guide (EN/RO/HU) + Swagger reference.
+"""/docs — trilingual guide (EN/RO/HU) + Swagger reference.
 
     GET /docs              EN, or redirect to /docs/ro|/docs/hu from Accept-Language
     GET /docs/en|ro|hu     Guide: quick start, model, recipes, catalogue, reference, errors, cite

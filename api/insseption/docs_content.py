@@ -357,5 +357,6 @@ ERRORS = [
 ]
 
 CHANGELOG = [
-    ("2026-10-23", "v0.1.0 — JSON API tunnel for TEMPO-Online, Python client, ROEM Traefik deploy, trilingual guide."),
+    ("2026-10-23", "v0.1.1 — Chat-first front page; DeepSeek v4.1 Flash agent; PyPI install."),
+    ("2026-10-23", "v0.1.0 — JSON API tunnel for TEMPO-Online, Python client, Traefik deploy, trilingual guide."),
 ]
