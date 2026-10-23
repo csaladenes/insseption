@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 UPSTREAM_BASE = os.environ.get(
     "INSSEPTION_UPSTREAM", "http://statistici.insse.ro:8077/tempo-ins"
 ).rstrip("/")

@@ -7,7 +7,7 @@ JSON API + Python client for [INSSE TEMPO-Online](http://statistici.insse.ro:807
 - **Python package** — `from insseption import Client`
 - **UI** — chat-first front page at `/` (Ask TEMPO agent); JSON discovery at `/api`
 
-Production target: **https://insse.csaladen.es** (ROEM AWS / Traefik)
+Production: **https://insse.csaladen.es**
 
 [INSSE reuse terms](https://insse.ro/cms/ro/content/reutilizarea-statisticilor-sse)
 
@@ -53,7 +53,7 @@ insseption --base-url http://127.0.0.1:8787/api/v1 query POP105A
 
 | Method | Path | Returns |
 |--------|------|---------|
-| GET | `/` | Service catalog (JSON) |
+| GET | `/api` | Service catalog (JSON) |
 | GET | `/api/v1` | Endpoint list |
 | GET | `/api/v1/health` | `{ok, upstream_ok, ...}` |
 | GET | `/api/v1/meta` | Service metadata |
@@ -88,45 +88,45 @@ pip install -e ".[server]"
 uvicorn insseption.main:app --host 127.0.0.1 --port 8787
 ```
 
-## Deploy (ROEM AWS Traefik stack)
+## Deploy (Docker / Traefik)
 
-Integrated into the existing `covid19-romania` compose (same pattern as `fastapi`):
+Example host layout (adjust to your stack):
 
-- Host path: `/home/ec2-user/covid19-romania/insseption/`
-- Service: `insseption` in `docker-compose.yml`
-- Traefik: `Host:insse.csaladen.es` → `:8787`
-- Networks: `web` + `internal`
+- App path: `./insseption/` next to your compose file
+- Service: `insseption` (+ optional `insseption-agent`)
+- Traefik host rule: `insse.csaladen.es` → `:8787`
+- Networks: public edge + internal
 
 ```bash
-# on ROEM
-cd /home/ec2-user/covid19-romania
-# edit/sync ./insseption (rsync --exclude .env) and ensure ./insseption/.env (OPENROUTER_API_KEY). Guide: https://insse.csaladen.es/docs
+# on the host
+# sync ./insseption (rsync --exclude .env) and ensure ./insseption/.env (OPENROUTER_API_KEY)
 docker-compose up -d --build --no-deps insseption
 curl -sS https://insse.csaladen.es/api/v1/health
 ```
 
-## Floating chat agent (separate container)
+Guide: https://insse.csaladen.es/docs
 
-GEM-style NL agent in `./agent` (OpenRouter → TEMPO via the JSON API). The agent
-container stays on the internal Docker network; the API reverse-proxies `/agent/*`:
+## Chat agent (separate container)
+
+NL agent in `./agent` (OpenRouter → TEMPO via the JSON API). The agent
+container stays on the internal Docker network; the API reverse-proxies `/agent/*`.
+The chat UI **is** the site front page at `/`.
 
 | URL | Purpose |
 |-----|---------|
-| https://insse.csaladen.es/index.html | UI + bottom-right chat FAB |
+| https://insse.csaladen.es/ | Ask TEMPO (front page) |
 | https://insse.csaladen.es/agent/health | Agent health |
 | `POST` https://insse.csaladen.es/agent/api/query | `{ "query": "...", "generate_chart": true }` |
 
 ```bash
-# on ROEM (after syncing ./insseption/agent and compose service)
 docker-compose up -d --build --no-deps insseption insseption-agent
 curl -sS https://insse.csaladen.es/agent/health
 ```
 
-
 ## Host smoke harness
 
 ```bash
-# API + docs cite + chat.js + agent against production (or set INSSEPTION_HOST)
+# API + docs + chat home + agent against production (or set INSSEPTION_HOST)
 python3 scripts/harness.py
 # lighter API-only check:
 INSSEPTION_BASE=https://insse.csaladen.es/api/v1 python3 scripts/smoke.py
@@ -135,5 +135,4 @@ INSSEPTION_BASE=https://insse.csaladen.es/api/v1 python3 scripts/smoke.py
 ## License
 
 **MIT** — © Dénes Csala ([GitHub](https://github.com/csaladenes/insseption)).
-Hosted on [ROEM](https://econ.ubbcluj.ro/roem) (AWS / Traefik).
 Data remains subject to [INSSE](https://insse.ro/cms/ro/content/reutilizarea-statisticilor-sse) reuse terms.
