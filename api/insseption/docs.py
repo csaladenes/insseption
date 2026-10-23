@@ -102,7 +102,7 @@ def shell(
 <header><div class="brand">insseption <b>API</b><span>{e(t['site'])}</span></div>
 <nav><a href="{guide}">{e(t['nav_guide'])}</a>
 <a href="/docs/reference">{e(t['nav_ref'])}</a>
-<a href="/chat">{e(t['nav_chat'])}</a>
+<a href="/">{e(t['nav_chat'])}</a>
 <a href="{GITHUB}" target="_blank" rel="noopener">{e(t['nav_github'])}</a></nav>{switch}</header>
 <main>{body}</main>{scripts}</body></html>"""
     )
@@ -300,7 +300,7 @@ def render(base: str, matrices: list[dict], sample: str, lang: str = "en") -> st
 <p class="lead">{t['lead']}</p>
 <div class="base"><span class="muted small">{e(t['base_label'])}</span><code>{e(base)}</code>
 <a class="btn small" href="/docs/reference">{e(t['btn_ref'])}</a>
-<a class="btn small" href="/chat">{e(t['nav_chat'])}</a></div>
+<a class="btn small" href="/">{e(t['nav_chat'])}</a></div>
 <div class="facts">
 <div class="card static"><b>{e(t['fact_open_b'])}</b><span>{e(t['fact_open'])}</span></div>
 <div class="card static"><b>{e(t['fact_langs_b'])}</b><span>{e(t['fact_langs'])}</span></div>

@@ -2,11 +2,55 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="refresh" content="0;url=/docs" />
-  <title>insseption API</title>
-  <script>location.replace("/docs");</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ask TEMPO · insseption</title>
+  <meta name="description" content="Ask Romania INSSE TEMPO statistics in natural language — matrices, charts, and county maps via insseption." />
+  <meta name="theme-color" content="#06090D" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <script src="https://unpkg.com/topojson-client@3/dist/topojson-client.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
 </head>
-<body>
-  <p><a href="/docs">Continue to the guide</a> · <a href="/chat">Chat</a></p>
+<body class="landing">
+  <div class="aurora" aria-hidden="true">
+    <span class="orb orb-a"></span>
+    <span class="orb orb-b"></span>
+    <span class="orb orb-c"></span>
+    <span class="grid-fade"></span>
+  </div>
+
+  <header class="site-header">
+    <a class="brand" href="/">insseption <b>API</b><span>Ask TEMPO</span></a>
+    <nav>
+      <a href="/" aria-current="page">Chat</a>
+      <a href="/docs">Guide</a>
+      <a href="/docs/reference">Reference</a>
+      <a href="https://github.com/csaladenes/insseption" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="chat-main landing-main">
+    <section class="hero">
+      <p class="hero-kicker">Romania · INSSE TEMPO-Online</p>
+      <h1>Ask every matrix.<br /><em>Right where you are.</em></h1>
+      <p class="hero-lead">
+        Natural language → dataset codes → cleaned data → charts &amp; county maps.
+        The agent lands first; the JSON API stays one click away.
+      </p>
+      <div class="hero-pills" id="hero-pills"></div>
+    </section>
+
+    <div id="insse-chat-mount" class="stage"></div>
+    <p class="note">
+      Sursa: Institutul Național de Statistică – TEMPO-Online.
+      Unofficial mirror; no endorsement implied.
+      · <a href="/docs">API guide</a>
+      · <a href="/api/v1/health">health</a>
+    </p>
+  </main>
+
+  <script type="module" src="./chat.js"></script>
 </body>
 </html>

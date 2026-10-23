@@ -1,5 +1,5 @@
 /**
- * Ask TEMPO chat — docs-shell UI at /chat.
+ * Ask TEMPO agent — landing UI at / (ORI-style stage, RoEM theme).
  * Agent: ${origin}/agent  · skill: insseption-agents
  */
 const AGENT_BASE =
@@ -174,7 +174,7 @@ export function mountChat() {
     maxlength: "2000",
     autofocus: "true",
   });
-  const send = el("button", { type: "submit", className: "btn", text: "Ask" });
+  const send = el("button", { type: "submit", className: "btn", text: "Ask TEMPO" });
   form.append(input, send);
   panel.append(head, msgs, form);
   root.append(panel);
@@ -200,7 +200,26 @@ export function mountChat() {
       bubble.appendChild(viz);
       try {
         // eslint-disable-next-line no-new
-        new window.Chart(canvas.getContext("2d"), chart.config);
+        const cfg = chart.config || {};
+        cfg.options = cfg.options || {};
+        cfg.options.responsive = true;
+        cfg.options.maintainAspectRatio = false;
+        cfg.options.plugins = Object.assign(
+          {
+            legend: { labels: { color: "#F6F6F6", font: { family: "Roboto" } } },
+          },
+          cfg.options.plugins || {}
+        );
+        cfg.options.scales = cfg.options.scales || {};
+        for (const axis of Object.values(cfg.options.scales)) {
+          if (!axis || typeof axis !== "object") continue;
+          axis.ticks = Object.assign({ color: "#7096C2" }, axis.ticks || {});
+          axis.grid = Object.assign(
+            { color: "rgba(112,150,194,0.12)" },
+            axis.grid || {}
+          );
+        }
+        new window.Chart(canvas.getContext("2d"), cfg);
         exportNode = { canvas };
       } catch (_) {
         /* ignore */
@@ -267,21 +286,32 @@ export function mountChat() {
     msgs.scrollTop = msgs.scrollHeight;
   };
 
+  const fillExample = (text) => {
+    input.value = text || "";
+    input.focus();
+  };
+
+  // Hero suggestion pills (landing)
+  const pills = document.getElementById("hero-pills");
+  if (pills) {
+    for (const ex of EXAMPLES) {
+      pills.appendChild(
+        el("button", {
+          type: "button",
+          className: "hero-pill",
+          text: ex.length > 64 ? ex.slice(0, 61) + "…" : ex,
+          title: ex,
+          onClick: () => fillExample(ex),
+        })
+      );
+    }
+  }
+
   addMsg(
     "bot",
-    `<p>Ask TEMPO in RO / EN / HU. Pipeline: <strong>1</strong> find dataset codes → <strong>2</strong> return the DB query → <strong>3</strong> clean/analyze → <strong>4</strong> table + chart.</p>
-     <ul>${EXAMPLES.map(
-       (e) =>
-         `<li><button type="button" class="insse-chat-ex">${e}</button></li>`
-     ).join("")}</ul>
-     <p class="insse-chat-meta">JSON API guide: <a href="/docs">/docs</a> · agent: <code>/agent</code></p>`
+    `<p>Ask in <strong>RO / EN / HU</strong>. I will <strong>1)</strong> find TEMPO dataset codes, <strong>2)</strong> return the DB query, <strong>3)</strong> clean &amp; analyze, then <strong>4)</strong> present a table + chart/map.</p>
+     <p class="insse-chat-meta">Guide: <a href="/docs">/docs</a> · OpenAPI: <a href="/docs/reference">/docs/reference</a> · agent API: <code>/agent</code></p>`
   );
-  msgs.querySelectorAll(".insse-chat-ex").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      input.value = btn.textContent || "";
-      input.focus();
-    });
-  });
 
   form.addEventListener("submit", async (ev) => {
     ev.preventDefault();
@@ -341,7 +371,7 @@ export function mountChat() {
       );
     } finally {
       send.disabled = false;
-      send.textContent = "Ask";
+      send.textContent = "Ask TEMPO";
       input.focus();
     }
   });

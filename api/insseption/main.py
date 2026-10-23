@@ -334,15 +334,16 @@ def create_app() -> FastAPI:
     @app.get("/chat", include_in_schema=False)
     @app.get("/chat/", include_in_schema=False)
     async def chat_ui():
-        if static_root and (static_root / "chat.html").is_file():
-            return FileResponse(static_root / "chat.html")
-        return RedirectResponse("/docs", status_code=302)
+        # Canonical agent UI is the site landing page.
+        return RedirectResponse("/", status_code=302)
 
     @app.get("/", include_in_schema=False)
     async def site_root():
-        # Docs are the landing page; Chat lives under /chat (see header nav).
-        if static_root and static_root.is_dir():
-            return RedirectResponse("/docs", status_code=302)
+        # Ask TEMPO agent is the landing page; docs stay at /docs.
+        if static_root and (static_root / "index.html").is_file():
+            return FileResponse(static_root / "index.html")
+        if static_root and (static_root / "chat.html").is_file():
+            return FileResponse(static_root / "chat.html")
         return ApiJSONResponse(_service_root())
 
     if static_root and static_root.is_dir():
