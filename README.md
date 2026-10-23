@@ -118,6 +118,18 @@ docker-compose up -d --build --no-deps insseption insseption-agent
 curl -sS https://insse.csaladen.es/agent/health
 ```
 
+
+## Host smoke harness
+
+```bash
+# API + docs cite + chat.js + agent against production (or set INSSEPTION_HOST)
+python3 scripts/harness.py
+# lighter API-only check:
+INSSEPTION_BASE=https://insse.csaladen.es/api/v1 python3 scripts/smoke.py
+```
+
 ## License
 
-MIT — data remains subject to INSSE terms.
+**MIT** — © Dénes Csala ([GitHub](https://github.com/csaladenes/insseption)).
+Hosted on [ROEM](https://econ.ubbcluj.ro/roem) (AWS / Traefik).
+Data remains subject to [INSSE](https://insse.ro/cms/ro/content/reutilizarea-statisticilor-sse) reuse terms.

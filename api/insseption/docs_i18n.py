@@ -267,10 +267,16 @@ UI = {
         'TEMPO-Online. Reuse terms: <a '
         'href="https://insse.ro/cms/ro/content/reutilizarea-statisticilor-sse" target="_blank" '
         'rel="noopener">INSSE</a>.</p>',
- 'cite': '<p>Name INSSE and this API, and point at the matrix or query you used:</p>',
+ 'cite': '<p>Name <b>INSSE</b> and this API, and point at the matrix or query you used:</p>',
  'cite_text': 'National Institute of Statistics (Romania), TEMPO-Online, via insseption ({YEAR}): '
               '{URL}, accessed {DATE}.',
  'cite_note': 'Replace the URL with the matrix or query you used.',
+ 'cite_software': '<p><b>Software.</b> <code>insseption</code> is <b>MIT</b>-licensed by '
+                  '<a href="https://github.com/csaladenes" target="_blank" rel="noopener">Dénes Csala</a> '
+                  '(<a href="[[GITHUB]]" target="_blank" rel="noopener">[[GITHUB]]</a>), hosted on the '
+                  '<a href="[[ROEM]]" target="_blank" rel="noopener">ROEM</a> AWS / Traefik stack. '
+                  'Data remains subject to '
+                  '<a href="[[INSSE]]" target="_blank" rel="noopener">INSSE</a> reuse terms.</p>',
  'history_note': 'Documentation version [[VERSION]]. Breaking changes will get a new path '
                  '(<code>/api/v2</code>); <code>/api/v1</code> stays.',
  'copy': 'Copy',
@@ -397,10 +403,16 @@ UI["ro"] = {'html_title': 'Ghid',
         'INSSE TEMPO-Online. Termeni: <a '
         'href="https://insse.ro/cms/ro/content/reutilizarea-statisticilor-sse" target="_blank" '
         'rel="noopener">INSSE</a>.</p>',
- 'cite': '<p>Menționați INSSE și acest API, și indicați matricea sau interogarea folosită:</p>',
+ 'cite': '<p>Menționați <b>INSSE</b> și acest API, și indicați matricea sau interogarea folosită:</p>',
  'cite_text': 'Institutul Național de Statistică (România), TEMPO-Online, via insseption ({YEAR}): '
               '{URL}, accesat la {DATE}.',
  'cite_note': 'Înlocuiți URL-ul cu matricea sau interogarea folosită.',
+ 'cite_software': '<p><b>Software.</b> <code>insseption</code> este licențiat <b>MIT</b> de '
+                  '<a href="https://github.com/csaladenes" target="_blank" rel="noopener">Dénes Csala</a> '
+                  '(<a href="[[GITHUB]]" target="_blank" rel="noopener">[[GITHUB]]</a>), găzduit pe stiva '
+                  'AWS / Traefik <a href="[[ROEM]]" target="_blank" rel="noopener">ROEM</a>. '
+                  'Datele rămân sub termenii '
+                  '<a href="[[INSSE]]" target="_blank" rel="noopener">INSSE</a>.</p>',
  'history_note': 'Versiunea documentației [[VERSION]]. Schimbările care sparg apelurile existente '
                  'vor primi o cale nouă (<code>/api/v2</code>); <code>/api/v1</code> rămâne.',
  'copy': 'Copiază',
@@ -527,11 +539,18 @@ UI["hu"] = {'html_title': 'Útmutató',
         'TEMPO-Online. Feltételek: <a '
         'href="https://insse.ro/cms/ro/content/reutilizarea-statisticilor-sse" target="_blank" '
         'rel="noopener">INSSE</a>.</p>',
- 'cite': '<p>Nevezze meg az INSSE-t és ezt az API-t, és adja meg a használt mátrixot vagy '
+ 'cite': '<p>Nevezze meg az <b>INSSE</b>-t és ezt az API-t, és adja meg a használt mátrixot vagy '
          'lekérdezést:</p>',
  'cite_text': 'Románia Országos Statisztikai Intézete, TEMPO-Online, insseptionen keresztül '
               '({YEAR}): {URL}, letöltve: {DATE}.',
  'cite_note': 'Cserélje az URL-t a használt mátrixra vagy lekérdezésre.',
+ 'cite_software': '<p><b>Szoftver.</b> Az <code>insseption</code> <b>MIT</b> licencű, szerző: '
+                  '<a href="https://github.com/csaladenes" target="_blank" rel="noopener">Dénes Csala</a> '
+                  '(<a href="[[GITHUB]]" target="_blank" rel="noopener">[[GITHUB]]</a>), a '
+                  '<a href="[[ROEM]]" target="_blank" rel="noopener">ROEM</a> AWS / Traefik stacken '
+                  'hostolva. Az adatok az '
+                  '<a href="[[INSSE]]" target="_blank" rel="noopener">INSSE</a> újrahasználati '
+                  'feltételei alá tartoznak.</p>',
  'history_note': 'Dokumentáció verziója: [[VERSION]]. A meglévő hívásokat törő változások új '
                  'útvonalat kapnak (<code>/api/v2</code>); a <code>/api/v1</code> megmarad.',
  'copy': 'Másolás',

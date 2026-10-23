@@ -47,6 +47,8 @@ CHEVRON = (
 
 PUBLIC_BASE = "https://insse.csaladen.es"
 GITHUB = "https://github.com/csaladenes/insseption"
+ROEM = "https://econ.ubbcluj.ro/roem"
+INSSE_TERMS = "https://insse.ro/cms/ro/content/reutilizarea-statisticilor-sse"
 
 
 def e(v) -> str:
@@ -330,7 +332,8 @@ def render(base: str, matrices: list[dict], sample: str, lang: str = "en") -> st
 <h3>{e(t['h_web'])}</h3>{t['web']}</section>
 
 <section id="cite"><h2>{e(t['toc_cite'])}</h2>{t['cite']}{plain_block(cite, 'nohighlight')}
-<p class="muted small">{e(t['cite_note'])}</p></section>
+<p class="muted small">{e(t['cite_note'])}</p>
+{fill(t['cite_software'], GITHUB=GITHUB, ROEM=ROEM, INSSE=INSSE_TERMS)}</section>
 
 <section id="history"><h2>{e(t['toc_history'])}</h2>
 <div class="card tablecard"><div class="scroll"><table><tbody>{changes}</tbody></table></div></div>
