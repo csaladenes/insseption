@@ -53,10 +53,12 @@ RECIPES = {'browse': {'ro': ('Răsfoiți arborele TEMPO',
                  'A TEMPO hír-táblájából: mátrixkódok, dátumok, területek — frissítő '
                  'feladatokhoz.')},
  'package': {'ro': ('Folosiți pachetul Python',
-                    'Aceleași apeluri fără URL-uri scrise de mână: <code>pip install insseption</code> (sau din acest repo). <code>Client</code> oglindește '
+                    'Pe <a href="https://pypi.org/project/insseption/" target="_blank" rel="noopener">PyPI</a>: '
+                    '<code>pip install insseption</code>. <code>Client</code> oglindește '
                     'fiecare rută HTTP și întoarce JSON parsat.'),
              'hu': ('A Python csomag használata',
-                    'Ugyanazok a hívások kézzel írt URL nélkül: <code>pip install insseption</code> (vagy ebből a repóból). A <code>Client</code> minden '
+                    'A <a href="https://pypi.org/project/insseption/" target="_blank" rel="noopener">PyPI</a>-n: '
+                    '<code>pip install insseption</code>. A <code>Client</code> minden '
                     'HTTP-útvonalat tükröz, és parse-olt JSON-t ad.')}}
 
 REFERENCE = {'/api/v1/health|GET': {'ro': ('Disponibilitate și accesibilitatea amonte',
@@ -179,7 +181,7 @@ UI = {
  'fact_formats_b': 'JSON · CSV',
  'fact_formats': 'pretty JSON in the browser; CSV for analysis',
  'fact_client_b': 'Python',
- 'fact_client': 'pip-installable Client wrapper',
+ 'fact_client': 'PyPI: pip install insseption',
  'examples_in': 'Examples in',
  'toc_start': 'Quick start',
  'toc_access': 'Access and limits',
@@ -310,7 +312,7 @@ UI["ro"] = {'html_title': 'Ghid',
  'fact_formats_b': 'JSON · CSV',
  'fact_formats': 'JSON indentat în browser; CSV pentru analiză',
  'fact_client_b': 'Python',
- 'fact_client': 'Client instalabil cu pip',
+ 'fact_client': 'PyPI: pip install insseption',
  'examples_in': 'Exemple în',
  'toc_start': 'Start rapid',
  'toc_access': 'Acces și limite',
@@ -446,7 +448,7 @@ UI["hu"] = {'html_title': 'Útmutató',
  'fact_formats_b': 'JSON · CSV',
  'fact_formats': 'behúzott JSON a böngészőben; CSV elemzéshez',
  'fact_client_b': 'Python',
- 'fact_client': 'pippel telepíthető Client',
+ 'fact_client': 'PyPI: pip install insseption',
  'examples_in': 'Példák',
  'toc_start': 'Gyors kezdés',
  'toc_access': 'Hozzáférés és korlátok',

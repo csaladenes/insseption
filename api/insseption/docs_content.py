@@ -238,9 +238,9 @@ in
     {
         "id": "package",
         "title": "Use the Python package",
-        "lead": 'The same calls without hand-written URLs: <code>pip install insseption</code> (or '
-                'install from this repo). The <code>Client</code> mirrors every HTTP route and returns '
-                'parsed JSON.',
+        "lead": 'On <a href="https://pypi.org/project/insseption/" target="_blank" rel="noopener">PyPI</a>: '
+                '<code>pip install insseption</code>. The <code>Client</code> mirrors every HTTP route and '
+                'returns parsed JSON.',
         "url": "/api/v1/meta",
         "code": {
             "curl": '# the package wraps these HTTP calls\ncurl -sS "{BASE}/api/v1/meta" | jq .',
