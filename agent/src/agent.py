@@ -54,7 +54,12 @@ SYNONYMS: dict[str, tuple[str, ...]] = {
     "átlagbér": ("average", "earnings"), "salariul": ("average", "earnings"), "decese": ("deaths",), "deces": ("deaths",),
     "halálozás": ("deaths",), "căsător": ("marriages",), "casator": ("marriages",),
     "divorț": ("divorces",), "emigr": ("emigrants",), "imigr": ("immigrants",),
-    "locuin": ("dwellings",), "lakás": ("dwellings",), "elev": ("pupils",),
+    "locuin": ("dwellings",), "lakás": ("dwellings", "finished dwellings"),
+    "építés": ("construction", "dwellings"), "épület": ("building", "dwellings"),
+    "lakóépület": ("residential", "dwellings"), "építkezés": ("construction", "dwellings"),
+    "construcț": ("construction", "dwellings"), "construc": ("construction", "dwellings"),
+    "clădir": ("building", "dwellings"), "edifici": ("building", "dwellings"),
+    "elev": ("pupils",),
     "student": ("students",), "școl": ("school",), "spital": ("hospital",),
     "medic": ("physicians",), "export": ("exports",), "import": ("imports",),
     "pib": ("gross domestic product",), "gdp": ("gross domestic product",),
@@ -497,6 +502,12 @@ class TempoAgent:
                     hit = next((r for r in self.catalog if r.get("code") == code), None)
                     if hit:
                         picks.insert(0, hit)
+        if any(k in ql for k in ("dwelling", "housing", "lakás", "locuin", "construction", "épít", "construcț", "building", "épület")):
+            for code in ("LOC104A", "LOC101A", "LOC101B", "LOC105A", "LOC102A", "LOC103A"):
+                if not any(p.get("code") == code for p in picks):
+                    hit = next((r for r in self.catalog if r.get("code") == code), None)
+                    if hit:
+                        picks.insert(0, hit)
         return "\n".join(f"{r['code']}\t{r.get('name','')}" for r in picks)
 
     async def _resolve_followup(
@@ -635,7 +646,7 @@ class TempoAgent:
             "preflight {revised: bool, reason}.\n"
             "Revise when follow-ups change years/geography, or the matrix family is wrong.\n"
             "For year ranges (e.g. 1990-2000) set chart_hint=line and keep population matrices.\n"
-            "Never invent matrix codes. Keep selections {} unless you know exact nomItemIds."
+            "CRITICAL: If default_plan.matrix appears in catalogue_candidates, TRUST IT and keep it. Never reject a code just because you do not recognise it. Only change if you have a clearly better one from the catalogue. Never invent matrix codes. Keep selections {} unless you know exact nomItemIds."
         )
         user = json.dumps(
             {
@@ -719,6 +730,9 @@ class TempoAgent:
             "- Summarise cleaned numbers in plain language.\n"
             "- Prefer everyday wording; you may mention the official table code once.\n"
             "- Do not say 'matrix'. Never mention steps/preflight/pipeline.\n"
+            "- NEVER say 'you would need to query', 'to find this', 'to get this data', "
+            "'the dataset with code', or describe how to obtain data. "
+            "Just answer directly with the numbers you have.\n"
             "- Do not invent numbers; use only sample_rows / presentation_table.\n"
             "- End with 2–4 related follow-up questions the user might ask next.\n"
             "- Put each follow-up as: "
