@@ -99,7 +99,7 @@ def shell(
 <meta name="description" content="{e(t['description'])}">
 <title>{e(title)} · {e(t['site'])}</title>
 <style>{STYLE}</style>{extra_head}</head><body>
-<header><div class="brand">insseption <b>API</b><span>{e(t['site'])}</span></div>
+<header><div class="brand"><a href="/" style="color:inherit;text-decoration:none">insseption <b>API</b><span>{e(t['site'])}</span></a></div>
 <nav><a href="{guide}">{e(t['nav_guide'])}</a>
 <a href="/docs/reference">{e(t['nav_ref'])}</a>
 <a href="/">{e(t['nav_chat'])}</a>

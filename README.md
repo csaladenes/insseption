@@ -114,8 +114,9 @@ The chat UI **is** the site front page at `/`.
 
 | URL | Purpose |
 |-----|---------|
-| https://insse.csaladen.es/ | Guide (docs landing) |
-| https://insse.csaladen.es/chat | Ask TEMPO chat |
+| https://insse.csaladen.es/ | Ask TEMPO agent (landing) |
+| https://insse.csaladen.es/docs | Guide |
+| https://insse.csaladen.es/chat | Redirect → `/` |
 | https://insse.csaladen.es/agent/health | Agent health |
 | `POST` https://insse.csaladen.es/agent/api/query | `{ "query": "...", "generate_chart": true }` |
 
