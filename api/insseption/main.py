@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import io
 import re
 from contextlib import asynccontextmanager
@@ -330,6 +331,26 @@ def create_app() -> FastAPI:
 
     static_dir = os.environ.get("INSSEPTION_STATIC_DIR", "").strip()
     static_root = FsPath(static_dir) if static_dir else None
+
+    @app.get("/mapbox-config.js", include_in_schema=False)
+    async def mapbox_config_js():
+        """Browser Mapbox token/style (pk.* only) — same pattern as html/panels/mapbox8.html."""
+        token = os.environ.get("MAPBOX_ACCESS_TOKEN", "").strip()
+        style = os.environ.get(
+            "MAPBOX_STYLE",
+            "mapbox://styles/csaladenes/cku7ljfuy4axr17s9odnoqcaj",
+        ).strip()
+        if token and not token.startswith("pk."):
+            # Never expose secret tokens to the browser.
+            token = ""
+        body = (
+            "window.MAPBOX_ACCESS_TOKEN="
+            + json.dumps(token)
+            + ";window.MAPBOX_STYLE="
+            + json.dumps(style)
+            + ";\n"
+        )
+        return PlainTextResponse(body, media_type="application/javascript")
 
     @app.get("/chat", include_in_schema=False)
     @app.get("/chat/", include_in_schema=False)

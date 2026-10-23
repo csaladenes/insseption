@@ -78,20 +78,38 @@ function normName(s) {
 }
 
 async function renderChoropleth(host, chart) {
-  if (!window.L || !window.topojson) {
+  // Mapbox GL — same stack as ROEM html/panels/mapbox8.html
+  const token =
+    window.MAPBOX_ACCESS_TOKEN || window.INSSEPTION_MAPBOX_TOKEN || "";
+  if (!window.mapboxgl || !window.topojson) {
     host.textContent = "Map libraries not loaded.";
     return null;
   }
+  if (!token) {
+    host.textContent = "Map is not configured (missing Mapbox token).";
+    return null;
+  }
+
   const mapDiv = el("div", { className: "insse-chat-map" });
   host.appendChild(mapDiv);
-  const map = window.L.map(mapDiv, {
-    zoomControl: true,
+
+  window.mapboxgl.accessToken = token;
+  const style =
+    window.MAPBOX_STYLE ||
+    "mapbox://styles/csaladenes/cku7ljfuy4axr17s9odnoqcaj";
+  const map = new window.mapboxgl.Map({
+    container: mapDiv,
+    style,
+    center: [25.1, 46.0],
+    zoom: 5.6,
+    maxZoom: 11,
     attributionControl: true,
-  }).setView([45.9, 25.0], 6);
-  window.L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution: "&copy; OSM &copy; CARTO",
-    maxZoom: 12,
-  }).addTo(map);
+    preserveDrawingBuffer: true, // PNG export
+  });
+  map.addControl(
+    new window.mapboxgl.NavigationControl({ showCompass: false }),
+    "top-right"
+  );
 
   const geoUrl = chart.geo || "/geo/romania-counties.json";
   const topo = await fetch(geoUrl).then((r) => r.json());
@@ -101,39 +119,105 @@ async function renderChoropleth(host, chart) {
   const lookup = {};
   for (const [k, v] of Object.entries(values)) lookup[normName(k)] = v;
   const nums = Object.values(values).filter((v) => typeof v === "number");
-  const lo = Math.min(...nums);
-  const hi = Math.max(...nums);
+  const lo = nums.length ? Math.min(...nums) : 0;
+  const hi = nums.length ? Math.max(...nums) : 1;
   const prop = chart.name_property || "NAME_1";
   const low = chart.color_low || "#0b1019";
   const high = chart.color_high || "#7096C2";
 
-  const layer = window.L.geoJSON(geo, {
-    style(feat) {
-      const name = feat.properties?.[prop] || "";
-      const val = lookup[normName(name)];
-      const t = val == null || hi === lo ? 0 : (val - lo) / (hi - lo);
-      return {
-        color: "#35577D",
-        weight: 1,
-        fillColor: val == null ? "#1C2331" : lerpColor(low, high, t),
-        fillOpacity: 0.85,
-      };
-    },
-    onEachFeature(feat, lyr) {
-      const name = feat.properties?.[prop] || "";
-      const val = lookup[normName(name)];
-      lyr.bindTooltip(
-        `${name}: ${val == null ? "—" : val.toLocaleString("en-US")}`,
-        { sticky: true }
-      );
-    },
-  }).addTo(map);
-  try {
-    map.fitBounds(layer.getBounds(), { padding: [12, 12] });
-  } catch (_) {
-    /* ignore */
+  for (const feat of geo.features || []) {
+    const name = feat.properties?.[prop] || "";
+    const val = lookup[normName(name)];
+    feat.properties = feat.properties || {};
+    feat.properties.value = typeof val === "number" ? val : null;
+    feat.properties.label = name;
   }
-  setTimeout(() => map.invalidateSize(), 80);
+
+  const popup = new window.mapboxgl.Popup({
+    closeButton: false,
+    closeOnClick: false,
+    className: "insse-map-popup",
+  });
+
+  await new Promise((resolve) => {
+    if (map.isStyleLoaded()) resolve();
+    else map.once("load", resolve);
+  });
+
+  if (map.getSource("counties")) {
+    map.removeLayer("counties-fill");
+    map.removeLayer("counties-line");
+    map.removeSource("counties");
+  }
+  map.addSource("counties", { type: "geojson", data: geo });
+  map.addLayer({
+    id: "counties-fill",
+    type: "fill",
+    source: "counties",
+    paint: {
+      "fill-color": [
+        "case",
+        ["==", ["typeof", ["get", "value"]], "number"],
+        [
+          "interpolate",
+          ["linear"],
+          ["get", "value"],
+          lo,
+          low,
+          hi === lo ? lo + 1 : hi,
+          high,
+        ],
+        "#1C2331",
+      ],
+      "fill-opacity": 0.88,
+    },
+  });
+  map.addLayer({
+    id: "counties-line",
+    type: "line",
+    source: "counties",
+    paint: {
+      "line-color": "#35577D",
+      "line-width": 1,
+    },
+  });
+
+  map.on("mousemove", "counties-fill", (e) => {
+    map.getCanvas().style.cursor = "pointer";
+    const f = e.features && e.features[0];
+    if (!f) return;
+    const name = f.properties.label || f.properties[prop] || "";
+    const val = f.properties.value;
+    const text =
+      val == null || val === "null"
+        ? `${name}: —`
+        : `${name}: ${Number(val).toLocaleString("en-US")}`;
+    popup.setLngLat(e.lngLat).setHTML(text).addTo(map);
+  });
+  map.on("mouseleave", "counties-fill", () => {
+    map.getCanvas().style.cursor = "";
+    popup.remove();
+  });
+
+  try {
+    const bounds = new window.mapboxgl.LngLatBounds();
+    for (const feat of geo.features || []) {
+      const g = feat.geometry;
+      if (!g) continue;
+      const coords =
+        g.type === "Polygon"
+          ? g.coordinates[0]
+          : g.type === "MultiPolygon"
+            ? g.coordinates.flatMap((p) => p[0])
+            : [];
+      for (const c of coords) bounds.extend(c);
+    }
+    if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 28, maxZoom: 7.2 });
+  } catch (_) {
+    /* keep default Romania view */
+  }
+
+  setTimeout(() => map.resize(), 120);
   return { map, mapDiv };
 }
 
