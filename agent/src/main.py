@@ -47,6 +47,10 @@ class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=2000)
     generate_chart: bool = True
     chart_type: Optional[str] = None
+    lang: Optional[str] = Field(
+        default=None,
+        description="UI language hint: ro|en|hu (answers follow the question; TEMPO data uses ro/en).",
+    )
 
 
 class QueryResponse(BaseModel):
@@ -70,7 +74,11 @@ async def query_data(request: QueryRequest):
             detail="Agent not initialized. Check OPENROUTER_API_KEY.",
         )
     try:
-        result = await agent.query(request.query, generate_chart=request.generate_chart)
+        result = await agent.query(
+            request.query,
+            generate_chart=request.generate_chart,
+            lang=request.lang,
+        )
         return QueryResponse(**result)
     except Exception as exc:
         import traceback

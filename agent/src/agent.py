@@ -74,10 +74,18 @@ class TempoAgent:
         except Exception:
             return []
 
-    async def query(self, user_query: str, generate_chart: bool = True) -> dict[str, Any]:
+    async def query(
+        self,
+        user_query: str,
+        generate_chart: bool = True,
+        lang: str | None = None,
+    ) -> dict[str, Any]:
         # Default plan draft, then Step 0 PREFLIGHT revise if needed
-        plan = await self._plan(user_query)
-        plan = await self._preflight(user_query, plan)
+        ui_lang = (lang or "").strip().lower()
+        if ui_lang not in ("ro", "en", "hu"):
+            ui_lang = None
+        plan = await self._plan(user_query, ui_lang=ui_lang)
+        plan = await self._preflight(user_query, plan, ui_lang=ui_lang)
         matrix = (plan.get("matrix") or "").strip().upper()
         lang = plan.get("lang") if plan.get("lang") in ("ro", "en") else "en"
         selections = (
@@ -90,6 +98,7 @@ class TempoAgent:
             "note": plan.get("note"),
             "endpoint": f"POST /api/v1/matrices/{matrix}/query" if matrix else None,
             "preflight": plan.get("preflight"),
+            "ui_lang": ui_lang,
         }
 
         data: dict[str, Any] | None = None
@@ -320,16 +329,33 @@ class TempoAgent:
                         picks.insert(0, hit)
         return "\n".join(f"{r['code']}\t{r.get('name','')}" for r in picks)
 
-    async def _plan(self, user_query: str) -> dict[str, Any]:
+    async def _plan(self, user_query: str, ui_lang: str | None = None) -> dict[str, Any]:
         """Step 1: default TEMPO DB query plan (before preflight revise)."""
         catalog = self._catalog_snippet(user_query)
+        prefer = "en" if ui_lang == "en" else "ro" if ui_lang in ("ro", "hu") else None
+        if prefer:
+            lang_line = (
+                "  lang — 'ro' or 'en' for TEMPO labels "
+                f"(prefer '{prefer}' if unclear),\n"
+            )
+        else:
+            lang_line = "  lang — 'ro' or 'en' (match the question),\n"
+        if ui_lang:
+            answer_lang = (
+                "Answer language for later narrative should follow the question "
+                f"(UI language hint: {ui_lang})."
+            )
+        else:
+            answer_lang = (
+                "Answer language for later narrative should follow the question."
+            )
         system = (
             f"{MASTER_PIPELINE}\n\n"
             "You are drafting the default plan (Step 1). Preflight will revise it next.\n"
             "Translate the human question into a TEMPO DB query.\n"
             "Return ONLY a JSON object with keys:\n"
             "  matrix — TEMPO dataset code (e.g. POP105A, FOM104F) or null if unknown,\n"
-            "  lang — 'ro' or 'en' (match the question),\n"
+            f"{lang_line}"
             "  selections — object mapping dimension id strings to arrays of nomItemId ints; "
             "use {} when defaults are fine (server expands county maps),\n"
             "  note — one short sentence: which dataset you picked and why.\n"
@@ -337,7 +363,8 @@ class TempoAgent:
             "- Prefer well-known codes from the catalogue. Never invent codes.\n"
             "- If the user already names a code (e.g. POP105A), use it.\n"
             "- For average employees / salariați by county / județ / map, prefer FOM104F.\n"
-            "- Do not fetch or invent data values here — only return the query."
+            "- Do not fetch or invent data values here — only return the query.\n"
+            f"- {answer_lang}"
         )
         user = f"Question: {user_query}\n\nCatalogue candidates:\n{catalog}"
         raw = await self._chat(system, user)
@@ -353,12 +380,12 @@ class TempoAgent:
         except Exception:
             return {
                 "matrix": None,
-                "lang": "en",
+                "lang": prefer or "en",
                 "selections": {},
                 "note": f"Could not parse plan: {raw[:160]}",
             }
 
-    async def _preflight(self, user_query: str, plan: dict[str, Any]) -> dict[str, Any]:
+    async def _preflight(self, user_query: str, plan: dict[str, Any], ui_lang: str | None = None) -> dict[str, Any]:
         """Step 0: revise the default plan when the first pick looks wrong."""
         catalog = self._catalog_snippet(user_query, limit=30)
         matrix = (plan.get("matrix") or "").strip().upper()
@@ -473,6 +500,7 @@ class TempoAgent:
             "presentation_table": table_rows,
             "api_error": api_error,
             "attribution": "Sursa: INS TEMPO-Online (via insseption).",
+            "ui_lang": (db_query or {}).get("ui_lang"),
         }
         system = (
             f"{MASTER_PIPELINE}\n\n"
@@ -481,7 +509,7 @@ class TempoAgent:
             "Return ONLY clean HTML fragments (p, h3, ul, li, strong, table, code) — "
             "no html/body/script tags.\n"
             "Rules:\n"
-            "- Answer in the same language as the question.\n"
+            "- Answer in the same language as the question (if unclear, use ui_lang: ro/en/hu).\n"
             "- Summarise the cleaned numbers in plain language (population, jobs, counties…).\n"
             "- Prefer everyday wording over jargon. You may mention the official table "
             "code once in parentheses if useful, but do not say 'matrix'.\n"

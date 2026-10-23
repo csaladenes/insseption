@@ -23,33 +23,32 @@
   </div>
 
   <header class="site-header">
-    <a class="brand" href="/">insseption <b>RO</b><span>Statistics</span></a>
+    <a class="brand" href="/">insseption <b>RO</b><span data-i18n="brand_sub">Statistics</span></a>
     <nav>
-      <a href="/" aria-current="page">Explore</a>
-      <a href="/docs">About the data</a>
-      <a href="/docs/reference">For developers</a>
-      <a href="https://github.com/csaladenes/insseption" target="_blank" rel="noopener">GitHub</a>
+      <a href="/" aria-current="page" data-i18n="nav_explore">Explore</a>
+      <a href="/docs" data-i18n="nav_guide" data-i18n-href="docs_path">About the data</a>
+      <a href="/docs/reference" data-i18n="nav_ref" data-i18n-href="ref_path">For developers</a>
+      <a href="https://github.com/csaladenes/insseption" target="_blank" rel="noopener" data-i18n="nav_github">GitHub</a>
     </nav>
+    <div class="langs" id="lang-switch"></div>
   </header>
 
   <main class="chat-main landing-main">
     <section class="hero">
-      <p class="hero-kicker">National Institute of Statistics · Romania</p>
-      <h1>Find the figures<br /><em>you need.</em></h1>
-      <p class="hero-lead">
+      <p class="hero-kicker" data-i18n="hero_kicker">National Institute of Statistics · Romania</p>
+      <h1 data-i18n-html="hero_title">Find the figures<br /><em>you need.</em></h1>
+      <p class="hero-lead" data-i18n="hero_lead">
         Ask in everyday language about population, jobs, counties and more.
-        We look up the official numbers and show them as a clear chart or map —
-        in the spirit of sites like ONS, INS, KSH and Data USA.
+        We look up the official numbers and show them as a clear chart or map.
       </p>
       <div class="hero-pills" id="hero-pills"></div>
     </section>
 
     <div id="insse-chat-mount" class="stage"></div>
     <p class="note">
-      Source: National Institute of Statistics (INS) — TEMPO-Online.
-      This is an unofficial service and is not endorsed by INS.
-      · <a href="/docs">About the data</a>
-      · <a href="/docs/reference">For developers</a>
+      <span data-i18n="note">Source: National Institute of Statistics (INS) — TEMPO-Online. This is an unofficial service and is not endorsed by INS.</span>
+      · <a href="/docs" data-i18n="note_docs" data-i18n-href="docs_path">About the data</a>
+      · <a href="/docs/reference" data-i18n="note_ref" data-i18n-href="ref_path">For developers</a>
     </p>
   </main>
 

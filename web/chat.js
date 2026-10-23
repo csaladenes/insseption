@@ -1,7 +1,17 @@
 /**
- * Public explore UI at / — plain-language statistics assistant.
+ * Public explore UI at / — plain-language, trilingual (RO/HU/EN).
  * Agent: ${origin}/agent  · skill: insseption-agents
  */
+
+import {
+  detectLang,
+  loadStrings,
+  setLang,
+  SUPPORTED,
+  NAMES,
+  t as tr,
+} from "./i18n.js";
+
 const AGENT_BASE =
   (typeof window !== "undefined" && window.INSSEPTION_AGENT_BASE) ||
   `${location.origin}/agent`;
@@ -221,16 +231,66 @@ async function renderChoropleth(host, chart) {
   return { map, mapDiv };
 }
 
-const EXAMPLES = [
-  "How many people live in Romania?",
-  "How many employees are there in each county?",
-  "What is the latest population figure for Bucharest?",
-];
 
-export function mountChat() {
+const GLOBE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5"/></svg>`;
+const CHEVRON = `<svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 4.5l4 4 4-4"/></svg>`;
+
+function fillTemplate(s, vars = {}) {
+  return String(s || "").replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "");
+}
+
+function applyPageI18n(dict) {
+  document.documentElement.lang = dict._lang || "en";
+  if (dict.title) document.title = dict.title;
+  const meta = document.querySelector('meta[name="description"]');
+  if (meta && dict.description) meta.setAttribute("content", dict.description);
+
+  document.querySelectorAll("[data-i18n]").forEach((node) => {
+    const key = node.getAttribute("data-i18n");
+    if (key && dict[key] != null) node.textContent = dict[key];
+  });
+  document.querySelectorAll("[data-i18n-html]").forEach((node) => {
+    const key = node.getAttribute("data-i18n-html");
+    if (key && dict[key] != null) node.innerHTML = dict[key];
+  });
+  document.querySelectorAll("[data-i18n-href]").forEach((node) => {
+    const key = node.getAttribute("data-i18n-href");
+    if (key && dict[key] != null) node.setAttribute("href", dict[key]);
+  });
+}
+
+function renderLangSwitch(host, lang, onChange) {
+  if (!host) return;
+  const items = SUPPORTED.map(
+    (code) =>
+      `<li><a href="#${code}" hreflang="${code}" lang="${code}"${
+        code === lang ? " aria-current=\"true\"" : ""
+      }>${NAMES[code]}</a></li>`
+  ).join("");
+  host.innerHTML = `<details class="lang-switch"><summary aria-label="${tr(
+    { lang_label: "Language" },
+    "lang_label"
+  )}: ${NAMES[lang]}">${GLOBE}<span>${lang.toUpperCase()}</span>${CHEVRON}</summary><ul>${items}</ul></details>`;
+  // fix label with real dict via host dataset later; summary rebuilt in apply
+  host.querySelectorAll("a[hreflang]").forEach((a) => {
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      const code = a.getAttribute("hreflang");
+      const details = host.querySelector("details");
+      if (details) details.open = false;
+      onChange(code);
+    });
+  });
+}
+
+export async function mountChat() {
   const mount =
     document.getElementById("insse-chat-mount") || document.body;
   if (document.getElementById("insse-chat-root")) return;
+
+  let lang = detectLang();
+  let dict = await loadStrings(lang);
+  dict._lang = lang;
 
   const root = el("div", { id: "insse-chat-root", className: "insse-chat" });
   const panel = el("div", {
@@ -240,11 +300,8 @@ export function mountChat() {
   });
 
   const head = el("div", { className: "insse-chat-head" }, [
-    el("strong", { text: "Explore statistics" }),
-    el("span", {
-      className: "insse-chat-sub",
-      text: "Ask a question — get official figures, charts, and county maps",
-    }),
+    el("strong", { className: "chat-title", text: "" }),
+    el("span", { className: "insse-chat-sub chat-sub", text: "" }),
   ]);
 
   const msgs = el("div", {
@@ -254,15 +311,77 @@ export function mountChat() {
   const form = el("form", { className: "insse-chat-form" });
   const input = el("textarea", {
     rows: "3",
-    placeholder: "Try: How many people live in Romania? (RO / EN / HU)",
     maxlength: "2000",
     autofocus: "true",
   });
-  const send = el("button", { type: "submit", className: "btn", text: "Ask" });
+  const send = el("button", { type: "submit", className: "btn", text: "" });
   form.append(input, send);
   panel.append(head, msgs, form);
   root.append(panel);
   mount.appendChild(root);
+
+  const fillExample = (text) => {
+    input.value = text || "";
+    input.focus();
+  };
+
+  const examples = () => [dict.ex1, dict.ex2, dict.ex3].filter(Boolean);
+
+  const renderPills = () => {
+    const pills = document.getElementById("hero-pills");
+    if (!pills) return;
+    pills.innerHTML = "";
+    for (const ex of examples()) {
+      pills.appendChild(
+        el("button", {
+          type: "button",
+          className: "hero-pill",
+          text: ex.length > 64 ? ex.slice(0, 61) + "…" : ex,
+          title: ex,
+          onClick: () => fillExample(ex),
+        })
+      );
+    }
+  };
+
+  const showWelcome = () => {
+    msgs.innerHTML = "";
+    const meta = fillTemplate(dict.welcome_meta, {
+      docs: dict.docs_path || "/docs",
+      ref: dict.ref_path || "/docs/reference",
+    });
+    addMsg(
+      "bot",
+      `<p>${dict.welcome}</p><p class="insse-chat-meta">${meta}</p>`
+    );
+  };
+
+  const applyChrome = () => {
+    applyPageI18n(dict);
+    head.querySelector(".chat-title").textContent = dict.chat_title || "";
+    head.querySelector(".chat-sub").textContent = dict.chat_sub || "";
+    input.placeholder = dict.placeholder || "";
+    send.textContent = dict.ask || "Ask";
+    renderPills();
+    const langHost = document.getElementById("lang-switch");
+    renderLangSwitch(langHost, lang, async (code) => {
+      if (!SUPPORTED.includes(code) || code === lang) return;
+      lang = code;
+      setLang(lang);
+      dict = await loadStrings(lang);
+      dict._lang = lang;
+      applyChrome();
+      showWelcome();
+    });
+    // refresh aria label with translated lang_label
+    const summary = langHost?.querySelector("summary");
+    if (summary) {
+      summary.setAttribute(
+        "aria-label",
+        `${dict.lang_label || "Language"}: ${NAMES[lang]}`
+      );
+    }
+  };
 
   const addMsg = async (role, html, payload = {}) => {
     const bubble = el("div", { className: `insse-chat-msg ${role}` });
@@ -283,7 +402,6 @@ export function mountChat() {
       viz.appendChild(wrap);
       bubble.appendChild(viz);
       try {
-        // eslint-disable-next-line no-new
         const cfg = chart.config || {};
         cfg.options = cfg.options || {};
         cfg.options.responsive = true;
@@ -318,7 +436,7 @@ export function mountChat() {
           el("button", {
             type: "button",
             className: "btn small",
-            text: "Download table (CSV)",
+            text: dict.download_csv || "Download table (CSV)",
             onClick: () =>
               downloadBlob(
                 `${payload.matrix || "romania-statistics"}.csv`,
@@ -331,7 +449,7 @@ export function mountChat() {
         el("button", {
           type: "button",
           className: "btn small",
-          text: "Download chart (PNG)",
+          text: dict.download_png || "Download chart (PNG)",
           onClick: async () => {
             const target =
               exportNode?.mapDiv ||
@@ -370,32 +488,8 @@ export function mountChat() {
     msgs.scrollTop = msgs.scrollHeight;
   };
 
-  const fillExample = (text) => {
-    input.value = text || "";
-    input.focus();
-  };
-
-  // Hero suggestion pills (landing)
-  const pills = document.getElementById("hero-pills");
-  if (pills) {
-    for (const ex of EXAMPLES) {
-      pills.appendChild(
-        el("button", {
-          type: "button",
-          className: "hero-pill",
-          text: ex.length > 64 ? ex.slice(0, 61) + "…" : ex,
-          title: ex,
-          onClick: () => fillExample(ex),
-        })
-      );
-    }
-  }
-
-  addMsg(
-    "bot",
-    `<p>Ask a question in <strong>Romanian, English or Hungarian</strong> — for example about population or jobs. I’ll find the official figures and show a chart or map when it helps.</p>
-     <p class="insse-chat-meta">More detail: <a href="/docs">About the data</a> · <a href="/docs/reference">For developers</a></p>`
-  );
+  applyChrome();
+  showWelcome();
 
   form.addEventListener("submit", async (ev) => {
     ev.preventDefault();
@@ -407,7 +501,7 @@ export function mountChat() {
     send.textContent = "…";
     const thinking = el("div", {
       className: "insse-chat-msg bot pending",
-      text: "Looking up the latest figures…",
+      text: dict.thinking || "…",
     });
     msgs.appendChild(thinking);
     msgs.scrollTop = msgs.scrollHeight;
@@ -415,14 +509,18 @@ export function mountChat() {
       const res = await fetch(`${AGENT_BASE}/api/query`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ query: q, generate_chart: true }),
+        body: JSON.stringify({
+          query: q,
+          generate_chart: true,
+          lang,
+        }),
       });
       const data = await res.json();
       thinking.remove();
       if (!res.ok) {
         await addMsg(
           "bot",
-          `<p>Sorry — something went wrong: ${(
+          `<p>${dict.error_agent || "Error"}: ${(
             data.detail ||
             res.statusText ||
             ""
@@ -434,18 +532,19 @@ export function mountChat() {
           `<p>${String(data.error).replace(/</g, "&lt;")}</p>`
         );
       } else {
-        const html = data.answer || "<p>(empty answer)</p>";
-        await addMsg("bot", html, data);
+        await addMsg("bot", data.answer || "<p>(…)</p>", data);
       }
     } catch (err) {
       thinking.remove();
       await addMsg(
         "bot",
-        `<p>Could not reach the statistics service: ${String(err.message || err)}</p>`
+        `<p>${dict.error_network || "Network error"}: ${String(
+          err.message || err
+        )}</p>`
       );
     } finally {
       send.disabled = false;
-      send.textContent = "Ask";
+      send.textContent = dict.ask || "Ask";
       input.focus();
     }
   });
@@ -460,7 +559,9 @@ export function mountChat() {
 }
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", mountChat);
+  document.addEventListener("DOMContentLoaded", () => {
+    mountChat().catch((err) => console.error(err));
+  });
 } else {
-  mountChat();
+  mountChat().catch((err) => console.error(err));
 }

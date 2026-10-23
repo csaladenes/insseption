@@ -75,7 +75,7 @@ body {
   color: var(--light-blue); margin-left: 8px;
   font-size: 11px; text-transform: uppercase; letter-spacing: 1.6px; font-weight: 500;
 }
-header nav, .site-header nav { display: flex; gap: 18px; margin-left: auto }
+header nav, .site-header nav { display: flex; gap: 18px; flex-wrap: wrap }
 header a, .site-header nav a {
   color: var(--almost-white); text-decoration: none; opacity: .72; font-weight: 400;
 }
@@ -274,3 +274,34 @@ a { color: var(--light-blue) }
 .insse-map-popup .mapboxgl-popup-tip { border-top-color: rgb(6 9 13 / 92%); }
 .mapboxgl-ctrl-group { background: rgb(11 16 25 / 85%) !important; border: 1px solid rgb(112 150 194 / 30%) !important; }
 .mapboxgl-ctrl-group button { background-color: transparent !important; }
+
+/* Language switch — match docs shell */
+header .langs, .site-header .langs { margin-left: auto; position: relative }
+.site-header nav { margin-left: 0 }
+.lang-switch summary {
+  list-style: none; display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; border-radius: 100px; border: 1px solid #7096C266;
+  background: var(--card-bg); cursor: pointer; font-size: 14px; user-select: none;
+  color: var(--almost-white);
+}
+.lang-switch summary::-webkit-details-marker { display: none }
+.lang-switch summary:hover, .lang-switch[open] summary {
+  color: var(--light-blue); box-shadow: 0 0 13px 5px #35577D80;
+}
+.lang-switch svg { width: 16px; height: 16px }
+.lang-switch .chev { width: 10px; height: 10px; transition: transform .3s }
+.lang-switch[open] .chev { transform: rotate(180deg) }
+.lang-switch ul {
+  position: absolute; right: 0; top: calc(100% + 10px); z-index: 60;
+  list-style: none; margin: 0; padding: 8px; min-width: 11rem;
+  border-radius: 20px; background: rgb(6 9 13 / 94%); border: 1px solid var(--line);
+}
+.lang-switch li a {
+  display: block; padding: 8px 14px; border-radius: 12px;
+  opacity: 1; color: var(--almost-white); text-decoration: none;
+}
+.lang-switch li a:hover { background: var(--card-hover) }
+.lang-switch li a[aria-current] { color: var(--light-blue) }
+@media (max-width: 720px) {
+  .site-header .langs { margin-left: 0 }
+}
