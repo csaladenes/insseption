@@ -21,6 +21,7 @@ try:
         build_chart,
         expand_county_selections,
         looks_like_county_query,
+        mentioned_years,
         parse_year_range,
         prefer_matrix_for_years,
     )
@@ -32,6 +33,7 @@ except ImportError:
         build_chart,
         expand_county_selections,
         looks_like_county_query,
+        mentioned_years,
         parse_year_range,
         prefer_matrix_for_years,
     )
@@ -89,6 +91,11 @@ Step 3 — ANALYZE: After real data returns, clean/reformat, then interpret
 Step 4 — PRESENT: Table + chart via predefined skills. Skip charts for a single number.
   User-facing HTML: concise answer only — no step lists, no "preflight" talk.
 """.strip()
+
+
+def _kw_hit(keyword: str, text: str) -> bool:
+    """Keyword match anchored at a word start; suffixes allowed for inflected forms."""
+    return re.search(r"(?<!\w)" + re.escape(keyword.lower()), text) is not None
 
 
 class TempoAgent:
@@ -171,8 +178,34 @@ class TempoAgent:
             effective_query, plan, ui_lang=ui_lang, history=hist
         )
         matrix = (plan.get("matrix") or "").strip().upper()
+        asked_years = mentioned_years(effective_query)
+        # Knowledge bank: topic→matrix override, only when the matrix covers the asked years
+        kb_topics = (self.knowledge or {}).get("topic_hints") or {}
+        kb_matrices = (self.knowledge or {}).get("matrices") or {}
+        ql_lower = effective_query.lower()
+        kb_hits = sorted(
+            (
+                (max(len(k) for k in hit_kws), topic, hint)
+                for topic, hint in kb_topics.items()
+                if hint.get("matrix")
+                and (hit_kws := [k for k in hint.get("keywords") or [] if _kw_hit(k, ql_lower)])
+            ),
+            key=lambda x: -x[0],
+        )
+        for _, topic, hint in kb_hits:
+            kb_code = hint["matrix"]
+            span = (kb_matrices.get(kb_code) or {}).get("year_range")
+            if asked_years and span and (asked_years[0] < span[0] or asked_years[1] > span[1]):
+                continue
+            if kb_code != matrix:
+                matrix = kb_code
+                plan["matrix"] = matrix
+                plan["note"] = f"kb:{topic}"
+            break
         # Older population windows need a matrix that actually covers those years
-        alt = prefer_matrix_for_years("\n".join([hist, user_query, effective_query]), matrix)
+        alt = prefer_matrix_for_years(
+            "\n".join([hist, user_query, effective_query]), matrix, years=asked_years
+        )
         if alt and alt != matrix:
             matrix = alt
             plan["matrix"] = matrix
@@ -185,18 +218,6 @@ class TempoAgent:
                     "reason": (plan["preflight"].get("reason") or "")
                     + f" Switched to {matrix} to cover the requested years.",
                 }
-        # Knowledge bank: deterministic topic→matrix override (AFTER year-range fallback)
-        kb_topics = (self.knowledge or {}).get("topic_hints") or {}
-        ql_lower = user_query.lower()
-        for topic, hint in kb_topics.items():
-            kws = hint.get("keywords") or []
-            if any(k in ql_lower for k in kws):
-                kb_code = hint.get("matrix")
-                if kb_code and kb_code != matrix:
-                    matrix = kb_code
-                    plan["matrix"] = matrix
-                    plan["note"] = f"kb:{topic}"
-                    break
         data_lang = plan.get("lang") if plan.get("lang") in ("ro", "en") else "en"
         selections = (
             plan.get("selections") if isinstance(plan.get("selections"), dict) else {}

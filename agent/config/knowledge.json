@@ -791,6 +791,13 @@
      "nopts": 1
     }
    ]
+  },
+  "TUR104A": {
+   "name": "Arrivals of tourists accommodated in the structure of tourists reception by type of accommodation and type of ownership",
+   "year_range": [
+    1990,
+    2021
+   ]
   }
  },
  "topic_hints": {
@@ -921,16 +928,20 @@
     "salarii",
     "kereset",
     "average wage",
-    "câștig salarial"
+    "câștig salarial",
+    "câștigul salarial"
    ],
    "note": "FOM106A only 1990-2008; FOM106E covers 2008+"
   },
   "earnings_old": {
    "matrix": "FOM106A",
    "keywords": [
-    "earnings 2008",
-    "salarii 2008",
-    "kereset 2008"
+    "earnings",
+    "salarii",
+    "kereset",
+    "average wage",
+    "câștig salarial",
+    "câștigul salarial"
    ],
    "note": "CAEN Rev.1, ends 2008"
   },
@@ -945,15 +956,19 @@
    ]
   },
   "tourists": {
-   "matrix": "TUR102A",
+   "matrix": "TUR104A",
    "keywords": [
     "tourists",
     "turiști",
+    "turiștilor",
     "turisták",
+    "turista",
+    "tourist arrivals",
+    "sosiri",
+    "arrivals",
     "tourism",
-    "accommodation"
-   ],
-   "note": "TUR102A is capacity; TUR101A for arrivals"
+    "turism"
+   ]
   },
   "vehicles": {
    "matrix": "TRN102A",
@@ -993,6 +1008,16 @@
     "school",
     "școală",
     "education"
+   ]
+  },
+  "accommodation_capacity": {
+   "matrix": "TUR102A",
+   "keywords": [
+    "accommodation capacity",
+    "capacitate de cazare",
+    "capacitatea de cazare",
+    "szálláshely",
+    "accommodation"
    ]
   }
  },

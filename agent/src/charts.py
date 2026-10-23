@@ -365,9 +365,22 @@ def apply_year_range_selections(
     return out
 
 
-def prefer_matrix_for_years(text: str, current: str | None) -> str | None:
-    """Suggest a matrix that better covers an older year window."""
+def mentioned_years(text: str) -> tuple[int, int] | None:
+    """Year range from free text, including a single year as (y, y)."""
     yr = parse_year_range(text)
+    if yr:
+        return yr
+    years = [int(y) for y in _YEAR_LIST_RE.findall(text or "")]
+    return (years[0], years[0]) if years else None
+
+
+def prefer_matrix_for_years(
+    text: str, current: str | None, years: tuple[int, int] | None = None
+) -> str | None:
+    """Suggest a population matrix that better covers an older year window."""
+    if not current or current not in ("POP105A", "POP107A", "POP111A"):
+        return current
+    yr = years or parse_year_range(text)
     if not yr:
         return None
     lo, hi = yr

@@ -3466,5 +3466,9 @@
  {
   "code": "TRN102A",
   "name": "New registrations of road vehicles for passenger transport, by macroregions, development regions and counties"
+ },
+ {
+  "code": "TUR104A",
+  "name": "Arrivals of tourists accommodated in the structure of tourists reception by type of accommodation and type of ownership"
  }
 ]
