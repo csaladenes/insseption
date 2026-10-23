@@ -1,0 +1,1143 @@
+{
+ "matrices": {
+  "POP105A": {
+   "name": "Usually resident population by age group and ages, sex, urban/ rural area, macroregions, development regions and countie",
+   "year_range": [
+    2003,
+    2026
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Age group and ages",
+     "nopts": 104
+    },
+    {
+     "id": 2,
+     "label": "Sex",
+     "nopts": 3
+    },
+    {
+     "id": 3,
+     "label": "Urban and rural areas",
+     "nopts": 3
+    },
+    {
+     "id": 4,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 55
+    },
+    {
+     "id": 5,
+     "label": "Years",
+     "nopts": 24
+    },
+    {
+     "id": 6,
+     "label": "MU: Persons",
+     "nopts": 1
+    }
+   ]
+  },
+  "POP107A": {
+   "name": "LEGALLY RESIDENT POPULATION, by age group and age, sex, urban/ rural area, macroregions, development regions and countie",
+   "year_range": [
+    1992,
+    2026
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Age group and ages",
+     "nopts": 104
+    },
+    {
+     "id": 2,
+     "label": "Sex",
+     "nopts": 3
+    },
+    {
+     "id": 3,
+     "label": "Urban and rural areas",
+     "nopts": 3
+    },
+    {
+     "id": 4,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 55
+    },
+    {
+     "id": 5,
+     "label": "Years",
+     "nopts": 35
+    },
+    {
+     "id": 6,
+     "label": "MU: Persons",
+     "nopts": 1
+    }
+   ]
+  },
+  "POP201A": {
+   "name": "Live-births by sex, urban/ rural area, macroregions, development regions and counties",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Sex",
+     "nopts": 3
+    },
+    {
+     "id": 2,
+     "label": "Urban and rural areas",
+     "nopts": 3
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 56
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 5,
+     "label": "MU: Persons",
+     "nopts": 1
+    }
+   ]
+  },
+  "POP206B": {
+   "name": "Deaths by urban/ rural area, macroregions, development regions and counties",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Urban and rural areas",
+     "nopts": 3
+    },
+    {
+     "id": 2,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 55
+    },
+    {
+     "id": 3,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 4,
+     "label": "MU: Persons",
+     "nopts": 1
+    }
+   ]
+  },
+  "POP210A": {
+   "name": "Marriages by urban/ rural area, macroregions, development regions and counties",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Urban and rural areas",
+     "nopts": 3
+    },
+    {
+     "id": 2,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 55
+    },
+    {
+     "id": 3,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 4,
+     "label": "MU: Number",
+     "nopts": 1
+    }
+   ]
+  },
+  "POP217A": {
+   "name": "Life expectancy by urban/ rural area, sex, macroregions, development regions and counties",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Urban and rural areas",
+     "nopts": 3
+    },
+    {
+     "id": 2,
+     "label": "Sex",
+     "nopts": 3
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 55
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 5,
+     "label": "MU: Years",
+     "nopts": 1
+    }
+   ]
+  },
+  "POP309A": {
+   "name": "Permanent emigrants by sex, macroregions,development regions and counties of departure",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Sex",
+     "nopts": 3
+    },
+    {
+     "id": 2,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 55
+    },
+    {
+     "id": 3,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 4,
+     "label": "MU: Persons",
+     "nopts": 1
+    }
+   ]
+  },
+  "LOC101A": {
+   "name": "Dwellings stock at the end of the year by type of ownership, urban/ rural area, macroregions, development regions and co",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Type of ownership",
+     "nopts": 3
+    },
+    {
+     "id": 2,
+     "label": "Urban and rural areas",
+     "nopts": 2
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 56
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 5,
+     "label": "MU: Number",
+     "nopts": 1
+    }
+   ]
+  },
+  "LOC101B": {
+   "name": "Dwellings stock at the end of the year by type of ownership, counties and localities",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Type of ownership",
+     "nopts": 3
+    },
+    {
+     "id": 2,
+     "label": "Counties",
+     "nopts": 43
+    },
+    {
+     "id": 3,
+     "label": "Localities",
+     "nopts": 3183
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 5,
+     "label": "MU: Number",
+     "nopts": 1
+    }
+   ]
+  },
+  "LOC104A": {
+   "name": "Finished dwellings during the current year by financing sourses, urban/ rural area, macroregions, development regions an",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Financing souces ",
+     "nopts": 4
+    },
+    {
+     "id": 2,
+     "label": "Urban and rural areas",
+     "nopts": 3
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 56
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 5,
+     "label": "MU: Number",
+     "nopts": 1
+    }
+   ]
+  },
+  "LOC105A": {
+   "name": "Built up of finished dwelling by financing sourses, urban/ rural area, macroregions, developement regions and counties",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Financing souces ",
+     "nopts": 4
+    },
+    {
+     "id": 2,
+     "label": "Urban and rural areas",
+     "nopts": 3
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 56
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 5,
+     "label": "MU: Squares metres areas unfolded",
+     "nopts": 1
+    }
+   ]
+  },
+  "LOC102A": {
+   "name": "Rooms at the end of the year by type of ownership, urban/ rural area, macroregions, development regions and counties",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Type of ownership",
+     "nopts": 3
+    },
+    {
+     "id": 2,
+     "label": "Urban and rural areas",
+     "nopts": 2
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 56
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 5,
+     "label": "MU: Number",
+     "nopts": 1
+    }
+   ]
+  },
+  "LOC103A": {
+   "name": "Living floor at the end of the year by type of ownership, urban/ rural area, macroregions, development regions and count",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Type of ownership",
+     "nopts": 3
+    },
+    {
+     "id": 2,
+     "label": "Urban and rural areas",
+     "nopts": 2
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 56
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 5,
+     "label": "MU: Squares metres areas unfolded",
+     "nopts": 1
+    }
+   ]
+  },
+  "SOM103A": {
+   "name": "Unemployment rate by gender, macroregions, development regions and counties",
+   "year_range": [
+    1991,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Sex",
+     "nopts": 3
+    },
+    {
+     "id": 2,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 56
+    },
+    {
+     "id": 3,
+     "label": "Years",
+     "nopts": 35
+    },
+    {
+     "id": 4,
+     "label": "MU: Percentage",
+     "nopts": 1
+    }
+   ]
+  },
+  "FOM104D": {
+   "name": "Average number of employees by counties and localities",
+   "year_range": [
+    1990,
+    2024
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Counties",
+     "nopts": 43
+    },
+    {
+     "id": 2,
+     "label": "Localities",
+     "nopts": 3183
+    },
+    {
+     "id": 3,
+     "label": "Years",
+     "nopts": 35
+    },
+    {
+     "id": 4,
+     "label": "MU: Persons",
+     "nopts": 1
+    }
+   ]
+  },
+  "FOM104F": {
+   "name": "Average number of employees by economic activities at level of CANE Rev.2 (section and division), sex, macroregions, dev",
+   "year_range": [
+    2008,
+    2024
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "NACE Rev.2 (economic activities)",
+     "nopts": 68
+    },
+    {
+     "id": 2,
+     "label": "Sex",
+     "nopts": 3
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 55
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 17
+    },
+    {
+     "id": 5,
+     "label": "MU: Persons",
+     "nopts": 1
+    }
+   ]
+  },
+  "FOM106A": {
+   "name": "Average monthly nominal net earnings by economic activities at level of CANE Rev.1 section, categories of employees, mac",
+   "year_range": [
+    1990,
+    2008
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "CANE Rev.1 (activity of national economy-sections)",
+     "nopts": 19
+    },
+    {
+     "id": 2,
+     "label": "Categories of employees",
+     "nopts": 2
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 56
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 19
+    },
+    {
+     "id": 5,
+     "label": "MU: Lei, lei RON (from 2005)",
+     "nopts": 1
+    }
+   ]
+  },
+  "FOM106E": {
+   "name": "Average monthly nominal net earnings by economic activities at level of CANE Rev.2 (section and division), sex, macroreg",
+   "year_range": [
+    2008,
+    2024
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "NACE Rev.2 (economic activities)",
+     "nopts": 68
+    },
+    {
+     "id": 2,
+     "label": "Sex",
+     "nopts": 3
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 55
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 17
+    },
+    {
+     "id": 5,
+     "label": "MU: Lei, lei RON (from 2005)",
+     "nopts": 1
+    }
+   ]
+  },
+  "IPC101A": {
+   "name": "Monthly average inflation rate by purchased categories of goods and services ",
+   "year_range": [
+    1991,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Categories of purchased goods and services",
+     "nopts": 4
+    },
+    {
+     "id": 2,
+     "label": "Years",
+     "nopts": 35
+    },
+    {
+     "id": 3,
+     "label": "MU: Percentage",
+     "nopts": 1
+    }
+   ]
+  },
+  "TUR102A": {
+   "name": "Existing touristic accommodation capacity by type of establishment and type of ownership",
+   "year_range": [
+    1990,
+    2022
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Type of establishment of touristic reception",
+     "nopts": 19
+    },
+    {
+     "id": 2,
+     "label": "Type of ownership",
+     "nopts": 9
+    },
+    {
+     "id": 3,
+     "label": "Years",
+     "nopts": 33
+    },
+    {
+     "id": 4,
+     "label": "MU: Places",
+     "nopts": 1
+    }
+   ]
+  },
+  "TRN102A": {
+   "name": "New registrations of road vehicles for passenger transport, by macroregions, development regions and counties",
+   "year_range": [
+    2000,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Categories of vehicles",
+     "nopts": 2
+    },
+    {
+     "id": 2,
+     "label": "Categories of vehicles for passenger transport.",
+     "nopts": 5
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 55
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 26
+    },
+    {
+     "id": 5,
+     "label": "MU: Number",
+     "nopts": 1
+    }
+   ]
+  },
+  "PNS101A": {
+   "name": "Yearly average number of pensioners by system of retirement",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Pension system  ",
+     "nopts": 19
+    },
+    {
+     "id": 2,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 3,
+     "label": "MU: Thousands persons",
+     "nopts": 1
+    }
+   ]
+  },
+  "AMG157A": {
+   "name": "AMIGO - ILO unemployment rate  by age group and by sex",
+   "year_range": null,
+   "dims": [
+    {
+     "id": 1,
+     "label": "Age group",
+     "nopts": 14
+    },
+    {
+     "id": 2,
+     "label": "Sex",
+     "nopts": 3
+    },
+    {
+     "id": 3,
+     "label": "Periods",
+     "nopts": 152
+    },
+    {
+     "id": 4,
+     "label": "MU: Percentage",
+     "nopts": 1
+    }
+   ]
+  },
+  "SCL103B": {
+   "name": "Children and pupils enrollment in pre-university education, by level of education, languages, macroregions, development ",
+   "year_range": [
+    1990,
+    2025
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Levels of education ",
+     "nopts": 9
+    },
+    {
+     "id": 2,
+     "label": "Languages",
+     "nopts": 17
+    },
+    {
+     "id": 3,
+     "label": "Macroregions, development regions and counties",
+     "nopts": 55
+    },
+    {
+     "id": 4,
+     "label": "Years",
+     "nopts": 36
+    },
+    {
+     "id": 5,
+     "label": "MU: Persons",
+     "nopts": 1
+    }
+   ]
+  },
+  "GRV101A": {
+   "name": "Strikes initiated by observing the procedure provided by law by type of strikes",
+   "year_range": [
+    1992,
+    2009
+   ],
+   "dims": [
+    {
+     "id": 1,
+     "label": "Kinds of strikes",
+     "nopts": 4
+    },
+    {
+     "id": 2,
+     "label": "Years",
+     "nopts": 18
+    },
+    {
+     "id": 3,
+     "label": "MU: Number",
+     "nopts": 1
+    }
+   ]
+  }
+ },
+ "topic_hints": {
+  "population_current": {
+   "matrix": "POP105A",
+   "keywords": [
+    "population",
+    "locuitori",
+    "népesség",
+    "lakónépesség",
+    "resident",
+    "rezident"
+   ]
+  },
+  "population_legal": {
+   "matrix": "POP107A",
+   "keywords": [
+    "legally resident",
+    "populatie legala",
+    "domiciliu",
+    "legal population"
+   ]
+  },
+  "population_1990s": {
+   "matrix": "POP107A",
+   "keywords": [
+    "1990",
+    "1991",
+    "1992",
+    "1993",
+    "1994",
+    "1995",
+    "1996",
+    "1997",
+    "1998",
+    "1999"
+   ],
+   "note": "POP105A starts 2003; POP107A covers 1992+"
+  },
+  "births": {
+   "matrix": "POP201A",
+   "keywords": [
+    "births",
+    "nașteri",
+    "születés",
+    "live-born",
+    "născuți"
+   ]
+  },
+  "deaths": {
+   "matrix": "POP206B",
+   "keywords": [
+    "deaths",
+    "decese",
+    "halálozás",
+    "mortality"
+   ]
+  },
+  "marriages": {
+   "matrix": "POP210A",
+   "keywords": [
+    "marriages",
+    "căsătorii",
+    "házasság"
+   ]
+  },
+  "life_expectancy": {
+   "matrix": "POP217A",
+   "keywords": [
+    "life expectancy",
+    "speranța de viață",
+    "élettartam"
+   ]
+  },
+  "emigrants": {
+   "matrix": "POP309A",
+   "keywords": [
+    "emigrants",
+    "emigranți",
+    "kivándorlás",
+    "emigration"
+   ]
+  },
+  "dwellings_new": {
+   "matrix": "LOC104A",
+   "keywords": [
+    "new dwellings",
+    "új lakások",
+    "finished dwellings",
+    "lakásépítés",
+    "locuințe noi",
+    "lakások"
+   ]
+  },
+  "dwellings_stock": {
+   "matrix": "LOC101A",
+   "keywords": [
+    "dwellings stock",
+    "lakásállomány",
+    "locuințe",
+    "housing stock"
+   ]
+  },
+  "dwellings_rooms": {
+   "matrix": "LOC102A",
+   "keywords": [
+    "rooms",
+    "szobák",
+    "camere"
+   ]
+  },
+  "unemployment_rate": {
+   "matrix": "SOM103A",
+   "keywords": [
+    "unemployment rate",
+    "rata șomajului",
+    "munkanélküliségi ráta",
+    "șomaj"
+   ]
+  },
+  "employees_county": {
+   "matrix": "FOM104D",
+   "keywords": [
+    "employees by county",
+    "salariați pe județe",
+    "alkalmazottak megyénként",
+    "employees counties"
+   ]
+  },
+  "employees_activity": {
+   "matrix": "FOM104F",
+   "keywords": [
+    "employees by activity",
+    "salariați pe activități",
+    "employees economic"
+   ]
+  },
+  "earnings_recent": {
+   "matrix": "FOM106E",
+   "keywords": [
+    "earnings",
+    "salarii",
+    "kereset",
+    "average wage",
+    "câștig salarial"
+   ],
+   "note": "FOM106A only 1990-2008; FOM106E covers 2008+"
+  },
+  "earnings_old": {
+   "matrix": "FOM106A",
+   "keywords": [
+    "earnings 2008",
+    "salarii 2008",
+    "kereset 2008"
+   ],
+   "note": "CAEN Rev.1, ends 2008"
+  },
+  "inflation": {
+   "matrix": "IPC101A",
+   "keywords": [
+    "inflation",
+    "inflație",
+    "infláció",
+    "consumer price",
+    "prețuri de consum"
+   ]
+  },
+  "tourists": {
+   "matrix": "TUR102A",
+   "keywords": [
+    "tourists",
+    "turiști",
+    "turisták",
+    "tourism",
+    "accommodation"
+   ],
+   "note": "TUR102A is capacity; TUR101A for arrivals"
+  },
+  "vehicles": {
+   "matrix": "TRN102A",
+   "keywords": [
+    "vehicles",
+    "autoturisme",
+    "autók",
+    "car registrations",
+    "road vehicles"
+   ]
+  },
+  "pensioners": {
+   "matrix": "PNS101A",
+   "keywords": [
+    "pensioners",
+    "pensionari",
+    "nyugdíjasok",
+    "pension"
+   ]
+  },
+  "hospital": {
+   "matrix": "SAN102B",
+   "keywords": [
+    "hospital",
+    "spital",
+    "kórház",
+    "beds",
+    "paturi"
+   ]
+  },
+  "school": {
+   "matrix": "SCL103B",
+   "keywords": [
+    "pupils",
+    "elevi",
+    "tanulók",
+    "school",
+    "școală",
+    "education"
+   ]
+  }
+ },
+ "dim_hints": {
+  "POP105A": {
+   "territory_labels": [
+    "Macroregions",
+    "counties",
+    "jude",
+    "County"
+   ],
+   "year_labels": [
+    "Years"
+   ],
+   "sex_labels": [
+    "Sex"
+   ],
+   "age_labels": [
+    "Age"
+   ]
+  },
+  "POP107A": {
+   "territory_labels": [
+    "Macroregions",
+    "counties",
+    "jude",
+    "County"
+   ],
+   "year_labels": [
+    "Years"
+   ],
+   "sex_labels": [
+    "Sex"
+   ],
+   "age_labels": [
+    "Age"
+   ]
+  },
+  "LOC101A": {
+   "territory_labels": [
+    "Macroregions",
+    "counties",
+    "jude",
+    "County"
+   ],
+   "year_labels": [
+    "Years"
+   ]
+  },
+  "LOC101B": {
+   "territory_labels": [
+    "counties",
+    "jude",
+    "County",
+    "localities"
+   ],
+   "year_labels": [
+    "Years"
+   ]
+  },
+  "LOC104A": {
+   "territory_labels": [
+    "Macroregions",
+    "counties",
+    "jude",
+    "County"
+   ],
+   "year_labels": [
+    "Years"
+   ]
+  },
+  "SOM103A": {
+   "territory_labels": [
+    "Macroregions",
+    "counties",
+    "jude",
+    "County"
+   ],
+   "year_labels": [
+    "Years"
+   ]
+  },
+  "FOM104D": {
+   "territory_labels": [
+    "counties",
+    "jude",
+    "County"
+   ],
+   "year_labels": [
+    "Years"
+   ]
+  },
+  "FOM106E": {
+   "territory_labels": [
+    "Macroregions",
+    "counties",
+    "jude",
+    "County"
+   ],
+   "year_labels": [
+    "Years"
+   ]
+  },
+  "IPC101A": {
+   "year_labels": [
+    "Years",
+    "Months",
+    "Luni"
+   ]
+  },
+  "POP201A": {
+   "territory_labels": [
+    "Macroregions",
+    "counties",
+    "jude",
+    "County"
+   ],
+   "year_labels": [
+    "Years"
+   ]
+  },
+  "POP206B": {
+   "territory_labels": [
+    "Macroregions",
+    "counties",
+    "jude",
+    "County"
+   ],
+   "year_labels": [
+    "Years"
+   ]
+  }
+ }
+}

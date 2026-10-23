@@ -113,6 +113,19 @@ class TempoAgent:
         self.catalog = self._load_catalog(
             os.getenv("CATALOG_PATH", "/app/config/catalog.json")
         )
+        self.knowledge = self._load_knowledge(
+            os.getenv("KNOWLEDGE_PATH", "/app/config/knowledge.json")
+        )
+
+    @staticmethod
+    def _load_knowledge(path: str) -> dict[str, Any]:
+        p = Path(path)
+        if not p.is_file():
+            return {}
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
 
     @staticmethod
     def _load_catalog(path: str) -> list[dict[str, str]]:
@@ -508,6 +521,16 @@ class TempoAgent:
                     hit = next((r for r in self.catalog if r.get("code") == code), None)
                     if hit:
                         picks.insert(0, hit)
+        # Knowledge bank topic hints
+        kb_topics = (self.knowledge or {}).get("topic_hints") or {}
+        for topic, hint in kb_topics.items():
+            kws = hint.get("keywords") or []
+            if any(k in ql for k in kws):
+                code = hint.get("matrix")
+                if code and not any(p.get("code") == code for p in picks):
+                    hit = next((r for r in self.catalog if r.get("code") == code), None)
+                    if hit:
+                        picks.insert(0, hit)
         return "\n".join(f"{r['code']}\t{r.get('name','')}" for r in picks)
 
     async def _resolve_followup(
@@ -568,15 +591,28 @@ class TempoAgent:
             "  chart_hint — optional 'line'|'bar'|'map'|null.\n"
             "Rules:\n"
             "- Prefer catalogue codes. Never invent codes.\n"
+            "- Use matrix_year_ranges to pick a code that covers the requested time period.\n"
+            "- If the question mentions specific years, pick a matrix whose year_range covers them.\n"
             "- For population over time / year ranges, prefer POP105A and chart_hint=line.\n"
             "- For average employees by county, prefer FOM104F and chart_hint=map.\n"
             "- Do not invent data values."
         )
+        # Add knowledge bank context: year ranges and known dims for top candidates
+        kb_mats = (self.knowledge or {}).get("matrices") or {}
+        kb_info = {}
+        for line in catalog.splitlines():
+            code = line.split("\t")[0].strip()
+            if code in kb_mats:
+                kb_info[code] = {
+                    "year_range": kb_mats[code].get("year_range"),
+                    "name": kb_mats[code].get("name", "")[:80],
+                }
         user = json.dumps(
             {
                 "question": user_query,
                 "history": history,
                 "catalogue_candidates": catalog,
+                "matrix_year_ranges": kb_info,
             },
             ensure_ascii=False,
         )
