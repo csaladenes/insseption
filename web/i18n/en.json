@@ -28,5 +28,6 @@
   "ex2": "How many employees are there in each county?",
   "ex3": "What is the latest population figure for Bucharest?",
   "docs_path": "/docs/en",
-  "ref_path": "/docs/reference"
+  "ref_path": "/docs/reference",
+  "context_reset": "Conversation context was cleared after 30 minutes of inactivity."
 }

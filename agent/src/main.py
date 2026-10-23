@@ -51,6 +51,12 @@ class QueryRequest(BaseModel):
         default=None,
         description="UI language hint: ro|en|hu (answers follow the question; TEMPO data uses ro/en).",
     )
+    session_id: Optional[str] = Field(
+        default=None, description="Chat session id for follow-up context (30 min TTL)."
+    )
+    history: Optional[list[dict]] = Field(
+        default=None, description="Optional client-side prior turns [{role, content}]."
+    )
 
 
 class QueryResponse(BaseModel):
@@ -63,6 +69,9 @@ class QueryResponse(BaseModel):
     columns: Optional[list] = None
     data: Optional[list] = None
     error: Optional[str] = None
+    session_id: Optional[str] = None
+    context_reset: bool = False
+    context_notice: Optional[str] = None
 
 
 @app.post("/api/query", response_model=QueryResponse)
@@ -78,6 +87,8 @@ async def query_data(request: QueryRequest):
             request.query,
             generate_chart=request.generate_chart,
             lang=request.lang,
+            session_id=request.session_id,
+            history=request.history,
         )
         return QueryResponse(**result)
     except Exception as exc:
@@ -90,10 +101,21 @@ async def query_data(request: QueryRequest):
 @app.get("/health")
 async def health():
     agent = get_agent()
+    try:
+        from models_tier import MODEL_EXECUTE, MODEL_PREFLIGHT
+    except ImportError:
+        from src.models_tier import MODEL_EXECUTE, MODEL_PREFLIGHT
+
     return {
         "status": "healthy",
         "agent_initialized": agent is not None,
         "insseption_api": os.getenv("INSSEPTION_API_URL", "http://insseption:8787/api/v1"),
+        "models": {
+            "preflight": os.getenv("LLM_MODEL_PREFLIGHT", MODEL_PREFLIGHT),
+            "execute": os.getenv(
+                "LLM_MODEL_EXECUTE", os.getenv("LLM_MODEL", MODEL_EXECUTE)
+            ),
+        },
     }
 
 

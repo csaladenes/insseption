@@ -16,6 +16,44 @@ const AGENT_BASE =
   (typeof window !== "undefined" && window.INSSEPTION_AGENT_BASE) ||
   `${location.origin}/agent`;
 
+const SESSION_KEY = "insseption.session_id";
+const HISTORY_KEY = "insseption.chat_history";
+const ACTIVITY_KEY = "insseption.chat_active_at";
+const SESSION_TTL_MS = 30 * 60 * 1000;
+
+function loadClientHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.slice(-16) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveClientHistory(history) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify((history || []).slice(-16)));
+  localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
+}
+
+function touchActivity() {
+  localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
+}
+
+function clientSessionExpired() {
+  const ts = Number(localStorage.getItem(ACTIVITY_KEY) || 0);
+  return ts > 0 && Date.now() - ts > SESSION_TTL_MS;
+}
+
+function getSessionId() {
+  if (clientSessionExpired()) {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(HISTORY_KEY);
+    return null;
+  }
+  return localStorage.getItem(SESSION_KEY) || null;
+}
+
 function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -506,6 +544,12 @@ export async function mountChat() {
     msgs.appendChild(thinking);
     msgs.scrollTop = msgs.scrollHeight;
     try {
+      let history = loadClientHistory();
+      if (clientSessionExpired()) {
+        history = [];
+        localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(HISTORY_KEY);
+      }
       const res = await fetch(`${AGENT_BASE}/api/query`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -513,10 +557,27 @@ export async function mountChat() {
           query: q,
           generate_chart: true,
           lang,
+          session_id: getSessionId(),
+          history,
         }),
       });
       const data = await res.json();
       thinking.remove();
+      if (data.session_id) localStorage.setItem(SESSION_KEY, data.session_id);
+      // keep a light client history for resume / first hop
+      const next = history.concat([
+        { role: "user", content: q },
+        {
+          role: "assistant",
+          content: String(data.answer || "")
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 800),
+        },
+      ]);
+      saveClientHistory(next);
+      touchActivity();
       if (!res.ok) {
         await addMsg(
           "bot",

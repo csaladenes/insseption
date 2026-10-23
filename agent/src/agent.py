@@ -14,32 +14,45 @@ from typing import Any
 import httpx
 
 try:
-    from charts import build_chart, expand_county_selections, looks_like_county_query
+    from charts import (
+        apply_year_range_selections,
+        build_chart,
+        expand_county_selections,
+        looks_like_county_query,
+        parse_year_range,
+    )
+    from models_tier import MODEL_EXECUTE, MODEL_PREFLIGHT
+    from session import history_text, load_session, save_turn
 except ImportError:
-    from src.charts import build_chart, expand_county_selections, looks_like_county_query
+    from src.charts import (
+        apply_year_range_selections,
+        build_chart,
+        expand_county_selections,
+        looks_like_county_query,
+        parse_year_range,
+    )
+    from src.models_tier import MODEL_EXECUTE, MODEL_PREFLIGHT
+    from src.session import history_text, load_session, save_turn
 
-MODEL = "deepseek/deepseek-v4.1-flash"
 CODE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{2,19}$")
 
-# Master contract for every LLM call in this agent.
 MASTER_PIPELINE = """
 You are the insseption TEMPO agent for Romania INSSE statistics.
 Internal pipeline (never describe these steps to the end user):
 
 Step 0 — PREFLIGHT: Start from a default plan, then revise it if needed
-  (wrong matrix family, user-named code ignored, county map needs different
-  dataset/selections, lang mismatch). Prefer catalogue codes; never invent codes.
+  using conversation history (follow-ups like "1990-2000" mean continue the
+  prior topic — e.g. chart population over that period). Prefer catalogue codes.
 
-Step 1 — TRANSLATE: Turn the human question into a TEMPO database query
+Step 1 — TRANSLATE: Turn the (possibly resolved) question into a TEMPO database query
   {matrix, lang, selections, note}.
 
-Step 2 — RETURN QUERY: Keep the structured DB query for the runtime
-  (do not narrate step numbers or "pipeline" in user-facing HTML).
+Step 2 — RETURN QUERY: Keep the structured DB query for the runtime.
 
 Step 3 — ANALYZE: After real data returns, clean/reformat, then interpret
   only those values. Never invent numbers.
 
-Step 4 — PRESENT: Table + chart via predefined skills (bar / line / county map).
+Step 4 — PRESENT: Table + chart via predefined skills. Skip charts for a single number.
   User-facing HTML: concise answer only — no step lists, no "preflight" talk.
 """.strip()
 
@@ -53,7 +66,11 @@ class TempoAgent:
         self.base_url = os.getenv(
             "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
         ).rstrip("/")
-        self.model = os.getenv("LLM_MODEL", MODEL)
+        self.model_preflight = os.getenv("LLM_MODEL_PREFLIGHT", MODEL_PREFLIGHT)
+        self.model_execute = os.getenv("LLM_MODEL_EXECUTE", MODEL_EXECUTE)
+        # legacy single override applies to execute tier
+        if os.getenv("LLM_MODEL"):
+            self.model_execute = os.getenv("LLM_MODEL", self.model_execute)
         self.insse = os.getenv(
             "INSSEPTION_API_URL", "http://insseption:8787/api/v1"
         ).rstrip("/")
@@ -79,26 +96,51 @@ class TempoAgent:
         user_query: str,
         generate_chart: bool = True,
         lang: str | None = None,
+        session_id: str | None = None,
+        history: list[dict[str, str]] | None = None,
     ) -> dict[str, Any]:
-        # Default plan draft, then Step 0 PREFLIGHT revise if needed
+        sid, stored, expired = load_session(session_id)
+        # Prefer server session; fall back to client-provided history for first hop
+        messages = stored or list(history or [])
+        hist = history_text(messages)
+
         ui_lang = (lang or "").strip().lower()
         if ui_lang not in ("ro", "en", "hu"):
             ui_lang = None
-        plan = await self._plan(user_query, ui_lang=ui_lang)
-        plan = await self._preflight(user_query, plan, ui_lang=ui_lang)
+
+        context_notice = None
+        if expired:
+            context_notice = self._context_notice(ui_lang)
+
+        # Resolve follow-ups with mid-tier preflight model first when history exists
+        effective_query = user_query
+        if hist and not expired:
+            effective_query = await self._resolve_followup(
+                user_query, hist, ui_lang=ui_lang
+            )
+
+        plan = await self._plan(effective_query, ui_lang=ui_lang, history=hist)
+        plan = await self._preflight(
+            effective_query, plan, ui_lang=ui_lang, history=hist
+        )
         matrix = (plan.get("matrix") or "").strip().upper()
-        lang = plan.get("lang") if plan.get("lang") in ("ro", "en") else "en"
+        data_lang = plan.get("lang") if plan.get("lang") in ("ro", "en") else "en"
         selections = (
             plan.get("selections") if isinstance(plan.get("selections"), dict) else {}
         )
         db_query = {
             "matrix": matrix or None,
-            "lang": lang,
+            "lang": data_lang,
             "selections": selections,
             "note": plan.get("note"),
             "endpoint": f"POST /api/v1/matrices/{matrix}/query" if matrix else None,
             "preflight": plan.get("preflight"),
             "ui_lang": ui_lang,
+            "resolved_query": effective_query if effective_query != user_query else None,
+            "models": {
+                "preflight": self.model_preflight,
+                "execute": self.model_execute,
+            },
         }
 
         data: dict[str, Any] | None = None
@@ -108,49 +150,68 @@ class TempoAgent:
         table = None
         cleaned: dict[str, Any] | None = None
 
+        combined_text = f"{hist}\n{user_query}\n{effective_query}"
+
         if matrix and CODE_RE.match(matrix):
             try:
                 async with httpx.AsyncClient(timeout=90.0) as client:
                     meta_resp = await client.get(
-                        f"{self.insse}/matrices/{matrix}", params={"lang": lang}
+                        f"{self.insse}/matrices/{matrix}", params={"lang": data_lang}
                     )
                     if meta_resp.status_code < 400:
                         meta = meta_resp.json()
 
-                    want_county = looks_like_county_query(user_query, [])
-                    if want_county and meta:
-                        selections = expand_county_selections(meta, selections)
-                        plan["selections"] = selections
-                        db_query["selections"] = selections
-                        if "employee" in user_query.lower() or "salariat" in user_query.lower():
-                            if not matrix.startswith("FOM104"):
-                                for cand in ("FOM104F", "FOM104D", "FOM104A"):
-                                    if any(r.get("code") == cand for r in self.catalog):
-                                        matrix = cand
-                                        plan["matrix"] = matrix
-                                        db_query["matrix"] = matrix
-                                        db_query["endpoint"] = (
-                                            f"POST /api/v1/matrices/{matrix}/query"
-                                        )
-                                        meta_resp = await client.get(
-                                            f"{self.insse}/matrices/{matrix}",
-                                            params={"lang": lang},
-                                        )
-                                        if meta_resp.status_code < 400:
-                                            meta = meta_resp.json()
-                                            selections = expand_county_selections(
-                                                meta, {}
+                    want_county = looks_like_county_query(effective_query, []) or (
+                        looks_like_county_query(user_query, []) and not parse_year_range(user_query)
+                    )
+                    year_range = parse_year_range(combined_text)
+
+                    if meta:
+                        # Year spans from follow-ups like "1990-2000"
+                        if year_range:
+                            selections = apply_year_range_selections(
+                                meta, selections, combined_text
+                            )
+                            plan["selections"] = selections
+                            db_query["selections"] = selections
+                            # Prefer line charts for evolution
+                            plan["chart_hint"] = "line"
+
+                        if want_county and not year_range:
+                            selections = expand_county_selections(meta, selections)
+                            plan["selections"] = selections
+                            db_query["selections"] = selections
+                            ql = effective_query.lower()
+                            if "employee" in ql or "salariat" in ql:
+                                if not matrix.startswith("FOM104"):
+                                    for cand in ("FOM104F", "FOM104D", "FOM104A"):
+                                        if any(r.get("code") == cand for r in self.catalog):
+                                            matrix = cand
+                                            plan["matrix"] = matrix
+                                            db_query["matrix"] = matrix
+                                            db_query["endpoint"] = (
+                                                f"POST /api/v1/matrices/{matrix}/query"
                                             )
-                                            plan["selections"] = selections
-                                            db_query["selections"] = selections
-                                        break
+                                            meta_resp = await client.get(
+                                                f"{self.insse}/matrices/{matrix}",
+                                                params={"lang": data_lang},
+                                            )
+                                            if meta_resp.status_code < 400:
+                                                meta = meta_resp.json()
+                                                selections = expand_county_selections(
+                                                    meta, {}
+                                                )
+                                                plan["selections"] = selections
+                                                db_query["selections"] = selections
+                                            break
 
                     data, api_error = await self._run_query(
-                        client, matrix, lang, selections
+                        client, matrix, data_lang, selections
                     )
 
                     if (
                         want_county
+                        and not year_range
                         and meta
                         and data
                         and len(data.get("rows") or []) < 10
@@ -159,7 +220,7 @@ class TempoAgent:
                         plan["selections"] = selections
                         db_query["selections"] = selections
                         data2, err2 = await self._run_query(
-                            client, matrix, lang, selections
+                            client, matrix, data_lang, selections
                         )
                         if data2 and len(data2.get("rows") or []) > len(
                             data.get("rows") or []
@@ -170,19 +231,19 @@ class TempoAgent:
         else:
             api_error = plan.get("note") or "No matrix code selected (step 1 failed)"
 
-        # Step 3: clean / reformat before analysis
         if data and data.get("rows"):
             cleaned = self._clean_data(data)
 
-        # Step 4: presentation skill (table + chart)
+        force_kind = plan.get("chart_hint") if isinstance(plan.get("chart_hint"), str) else None
         if generate_chart and cleaned and cleaned.get("rows"):
             chart, table = build_chart(
-                user_query,
+                effective_query,
                 {
                     "columns": cleaned.get("columns") or data.get("columns"),
                     "rows": cleaned.get("raw_rows") or data.get("rows"),
                     "row_count": cleaned.get("row_count"),
                 },
+                force_kind=force_kind,
             )
             if table is None and cleaned.get("table_rows"):
                 table = {
@@ -196,8 +257,21 @@ class TempoAgent:
             }
 
         answer = await self._answer(
-            user_query, db_query, meta, cleaned or data, table, api_error
+            effective_query,
+            db_query,
+            meta,
+            cleaned or data,
+            table,
+            api_error,
+            history=hist,
         )
+        if context_notice:
+            answer = f"<p class=\"insse-chat-meta\">{context_notice}</p>" + answer
+
+        # Persist turn (plain text-ish for history)
+        plain = re.sub(r"<[^>]+>", " ", answer)
+        plain = re.sub(r"\s+", " ", plain).strip()
+        save_turn(sid, user_query, plain, matrix=matrix or None)
 
         return {
             "answer": answer,
@@ -209,11 +283,30 @@ class TempoAgent:
             "chart": chart,
             "table": table,
             "error": api_error,
+            "session_id": sid,
+            "context_reset": expired,
+            "context_notice": context_notice,
         }
 
     @staticmethod
+    def _context_notice(ui_lang: str | None) -> str:
+        if ui_lang == "ro":
+            return (
+                "Contextul conversației a fost resetat după mai mult de 30 de minute "
+                "de inactivitate. Continuă cu o întrebare nouă, completă."
+            )
+        if ui_lang == "hu":
+            return (
+                "A beszélgetés kontextusa törlődött 30 perc inaktivitás után. "
+                "Folytasd egy új, teljes kérdéssel."
+            )
+        return (
+            "Conversation context was cleared after more than 30 minutes of inactivity. "
+            "Please continue with a full new question."
+        )
+
+    @staticmethod
     def _clean_data(data: dict[str, Any]) -> dict[str, Any]:
-        """Step 3 helper: normalize labels/numbers; drop empty/header junk."""
         try:
             from charts import extract_series
         except ImportError:
@@ -229,8 +322,9 @@ class TempoAgent:
             cells = [re.sub(r"<[^>]+>", "", str(c)).strip() for c in row]
             if not any(cells):
                 continue
-            # drop pure header echoes
-            if cells and all(c.lower() in {str(x).lower() for x in columns} for c in cells if c):
+            if cells and all(
+                c.lower() in {str(x).lower() for x in columns} for c in cells if c
+            ):
                 continue
             clean_rows.append(cells)
         return {
@@ -260,9 +354,16 @@ class TempoAgent:
             return None, f"query HTTP {q_resp.status_code}: {q_resp.text[:200]}"
         return q_resp.json(), None
 
-    async def _chat(self, system: str, user: str, temperature: float = 0) -> str:
+    async def _chat(
+        self,
+        system: str,
+        user: str,
+        *,
+        model: str,
+        temperature: float = 0,
+    ) -> str:
         body = {
-            "model": self.model,
+            "model": model,
             "temperature": temperature,
             "messages": [
                 {"role": "system", "content": system},
@@ -275,7 +376,7 @@ class TempoAgent:
             "HTTP-Referer": self.referrer,
             "X-Title": self.title,
         }
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=90.0) as client:
             resp = await client.post(
                 f"{self.base_url}/chat/completions", headers=headers, json=body
             )
@@ -327,10 +428,50 @@ class TempoAgent:
                     hit = next((r for r in self.catalog if r.get("code") == code), None)
                     if hit:
                         picks.insert(0, hit)
+        if any(k in ql for k in ("population", "populatie", "populație", "népesség", "resident")):
+            for code in ("POP105A", "POP107A", "POP101A"):
+                if not any(p.get("code") == code for p in picks):
+                    hit = next((r for r in self.catalog if r.get("code") == code), None)
+                    if hit:
+                        picks.insert(0, hit)
         return "\n".join(f"{r['code']}\t{r.get('name','')}" for r in picks)
 
-    async def _plan(self, user_query: str, ui_lang: str | None = None) -> dict[str, Any]:
-        """Step 1: default TEMPO DB query plan (before preflight revise)."""
+    async def _resolve_followup(
+        self,
+        user_query: str,
+        history: str,
+        *,
+        ui_lang: str | None,
+    ) -> str:
+        """Mid-tier: turn short follow-ups into a full standalone question."""
+        system = (
+            f"{MASTER_PIPELINE}\n\n"
+            "You resolve follow-up messages into ONE standalone statistics question.\n"
+            "Use the conversation history. Examples:\n"
+            '- History about current population + user \"1990-2000\" '
+            "→ \"Show Romania's usually resident population from 1990 to 2000\".\n"
+            "- If the new message is already complete, return it unchanged.\n"
+            "Return ONLY the rewritten question text — no JSON, no quotes, no preamble."
+        )
+        user = json.dumps(
+            {"history": history, "latest_user_message": user_query, "ui_lang": ui_lang},
+            ensure_ascii=False,
+        )
+        try:
+            resolved = await self._chat(
+                system, user, model=self.model_preflight, temperature=0
+            )
+            resolved = resolved.strip().strip('"').strip()
+            return resolved or user_query
+        except Exception:
+            return user_query
+
+    async def _plan(
+        self,
+        user_query: str,
+        ui_lang: str | None = None,
+        history: str = "",
+    ) -> dict[str, Any]:
         catalog = self._catalog_snippet(user_query)
         prefer = "en" if ui_lang == "en" else "ro" if ui_lang in ("ro", "hu") else None
         if prefer:
@@ -340,15 +481,6 @@ class TempoAgent:
             )
         else:
             lang_line = "  lang — 'ro' or 'en' (match the question),\n"
-        if ui_lang:
-            answer_lang = (
-                "Answer language for later narrative should follow the question "
-                f"(UI language hint: {ui_lang})."
-            )
-        else:
-            answer_lang = (
-                "Answer language for later narrative should follow the question."
-            )
         system = (
             f"{MASTER_PIPELINE}\n\n"
             "You are drafting the default plan (Step 1). Preflight will revise it next.\n"
@@ -357,17 +489,24 @@ class TempoAgent:
             "  matrix — TEMPO dataset code (e.g. POP105A, FOM104F) or null if unknown,\n"
             f"{lang_line}"
             "  selections — object mapping dimension id strings to arrays of nomItemId ints; "
-            "use {} when defaults are fine (server expands county maps),\n"
-            "  note — one short sentence: which dataset you picked and why.\n"
+            "use {} when defaults are fine,\n"
+            "  note — one short sentence: which dataset you picked and why,\n"
+            "  chart_hint — optional 'line'|'bar'|'map'|null.\n"
             "Rules:\n"
-            "- Prefer well-known codes from the catalogue. Never invent codes.\n"
-            "- If the user already names a code (e.g. POP105A), use it.\n"
-            "- For average employees / salariați by county / județ / map, prefer FOM104F.\n"
-            "- Do not fetch or invent data values here — only return the query.\n"
-            f"- {answer_lang}"
+            "- Prefer catalogue codes. Never invent codes.\n"
+            "- For population over time / year ranges, prefer POP105A and chart_hint=line.\n"
+            "- For average employees by county, prefer FOM104F and chart_hint=map.\n"
+            "- Do not invent data values."
         )
-        user = f"Question: {user_query}\n\nCatalogue candidates:\n{catalog}"
-        raw = await self._chat(system, user)
+        user = json.dumps(
+            {
+                "question": user_query,
+                "history": history,
+                "catalogue_candidates": catalog,
+            },
+            ensure_ascii=False,
+        )
+        raw = await self._chat(system, user, model=self.model_execute)
         try:
             if not raw.startswith("{"):
                 start, end = raw.find("{"), raw.rfind("}")
@@ -385,8 +524,13 @@ class TempoAgent:
                 "note": f"Could not parse plan: {raw[:160]}",
             }
 
-    async def _preflight(self, user_query: str, plan: dict[str, Any], ui_lang: str | None = None) -> dict[str, Any]:
-        """Step 0: revise the default plan when the first pick looks wrong."""
+    async def _preflight(
+        self,
+        user_query: str,
+        plan: dict[str, Any],
+        ui_lang: str | None = None,
+        history: str = "",
+    ) -> dict[str, Any]:
         catalog = self._catalog_snippet(user_query, limit=30)
         matrix = (plan.get("matrix") or "").strip().upper()
         lang = plan.get("lang") if plan.get("lang") in ("ro", "en") else "en"
@@ -405,9 +549,11 @@ class TempoAgent:
                                 continue
                             dims.append(
                                 {
-                                    "id": d.get("id") or d.get("dimensionId"),
+                                    "id": d.get("id") or d.get("dim_code"),
                                     "name": d.get("name") or d.get("label"),
-                                    "options": len(d.get("options") or d.get("items") or []),
+                                    "options": len(
+                                        d.get("options") or d.get("items") or []
+                                    ),
                                 }
                             )
                         meta_summary = {
@@ -420,30 +566,26 @@ class TempoAgent:
 
         system = (
             f"{MASTER_PIPELINE}\n\n"
-            "You are executing Step 0 — PREFLIGHT only.\n"
-            "You receive a default plan. Revise it if necessary; otherwise keep it.\n"
-            "Return ONLY JSON with keys:\n"
-            "  matrix, lang, selections, note,\n"
-            "  preflight — object {revised: bool, reason: short string}.\n"
-            "Revise when:\n"
-            "- User named a different matrix code than the default.\n"
-            "- Question is county/județ/map but matrix is not county-capable "
-            "(prefer FOM104F for average employees by county).\n"
-            "- Matrix is null/unknown but catalogue has a clear better match.\n"
-            "- Language should follow the question.\n"
-            "Never invent matrix codes. Keep selections as {} unless you know "
-            "exact nomItemId ints from context. Do not mention steps to users."
+            "You are executing Step 0 — PREFLIGHT (mid-tier analysis).\n"
+            "Revise the default plan using the question AND conversation history.\n"
+            "Return ONLY JSON: matrix, lang, selections, note, chart_hint, "
+            "preflight {revised: bool, reason}.\n"
+            "Revise when follow-ups change years/geography, or the matrix family is wrong.\n"
+            "For year ranges (e.g. 1990-2000) set chart_hint=line and keep population matrices.\n"
+            "Never invent matrix codes. Keep selections {} unless you know exact nomItemIds."
         )
         user = json.dumps(
             {
                 "question": user_query,
+                "history": history,
                 "default_plan": plan,
                 "matrix_meta": meta_summary,
                 "catalogue_candidates": catalog,
+                "ui_lang": ui_lang,
             },
             ensure_ascii=False,
         )
-        raw = await self._chat(system, user)
+        raw = await self._chat(system, user, model=self.model_preflight)
         try:
             if not raw.startswith("{"):
                 start, end = raw.find("{"), raw.rfind("}")
@@ -465,6 +607,7 @@ class TempoAgent:
             "lang": revised.get("lang", plan.get("lang")),
             "selections": revised.get("selections", plan.get("selections")) or {},
             "note": revised.get("note", plan.get("note")),
+            "chart_hint": revised.get("chart_hint", plan.get("chart_hint")),
             "preflight": revised.get("preflight")
             if isinstance(revised.get("preflight"), dict)
             else {
@@ -486,12 +629,13 @@ class TempoAgent:
         data: dict[str, Any] | None,
         table: dict[str, Any] | None,
         api_error: str | None,
+        history: str = "",
     ) -> str:
-        """Steps 3–4 narrative: analyze cleaned data; presentation skill owns chart/table."""
         sample_rows = (data or {}).get("rows", [])[:30] if data else []
         table_rows = (table or {}).get("rows", [])[:40] if table else []
         payload = {
             "question": user_query,
+            "history": history,
             "db_query": db_query,
             "matrix_name": (meta or {}).get("name"),
             "columns": (data or {}).get("columns"),
@@ -504,20 +648,19 @@ class TempoAgent:
         }
         system = (
             f"{MASTER_PIPELINE}\n\n"
-            "Write the user-facing answer only (after analyze/present).\n"
-            "Charts/tables are built by the presentation skill — do not explain the pipeline.\n"
-            "Return ONLY clean HTML fragments (p, h3, ul, li, strong, table, code) — "
-            "no html/body/script tags.\n"
+            "Write the user-facing answer only.\n"
+            "Return ONLY clean HTML fragments (p, h3, ul, li, strong, table, code).\n"
             "Rules:\n"
-            "- Answer in the same language as the question (if unclear, use ui_lang: ro/en/hu).\n"
-            "- Summarise the cleaned numbers in plain language (population, jobs, counties…).\n"
-            "- Prefer everyday wording over jargon. You may mention the official table "
-            "code once in parentheses if useful, but do not say 'matrix'.\n"
-            "- If errored/empty: say so and suggest what to ask next — do not invent values.\n"
-            "- Never mention steps, preflight, pipeline, or internal planning.\n"
+            "- Answer in the same language as the question "
+            "(if unclear, use ui_lang: ro/en/hu).\n"
+            "- Summarise cleaned numbers in plain language.\n"
+            "- Prefer everyday wording; you may mention the official table code once.\n"
+            "- Do not say 'matrix'. Never mention steps/preflight/pipeline.\n"
             "- Do not invent numbers; use only sample_rows / presentation_table."
         )
-        raw = await self._chat(system, json.dumps(payload, ensure_ascii=False))
+        raw = await self._chat(
+            system, json.dumps(payload, ensure_ascii=False), model=self.model_execute
+        )
         if not raw.startswith("<"):
             raw = f"<p>{raw}</p>"
         return raw

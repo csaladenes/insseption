@@ -190,7 +190,10 @@ def build_chart(
     *,
     force_kind: str | None = None,
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
-    """Return (chart, table) following insseption-agents skill."""
+    """Return (chart, table) following insseption-agents skill.
+
+    Single-number answers keep a table but skip the chart.
+    """
     labels, values, table_rows = extract_series(data)
     if not values:
         return None, None
@@ -198,9 +201,73 @@ def build_chart(
     value_label = str(columns[-1]) if columns else "value"
     kind = force_kind or choose_kind(query, labels, values)
     table = {"columns": ["label", "value"], "rows": table_rows}
+    # One figure → no chart (still return the table for download/context)
+    if len(values) < 2:
+        return None, table
     if kind == "map":
+        if len(values) < 5:
+            return None, table
         return choropleth_payload(query, labels, values), table
     return chartjs_config(kind, query, labels, values, value_label), table
+
+
+_YEAR_RE = re.compile(
+    r"(?P<a>19\d{2}|20\d{2})\s*(?:[-–—]|to|until|pana|până|bis)\s*(?P<b>19\d{2}|20\d{2})",
+    re.I,
+)
+_YEAR_LIST_RE = re.compile(r"\b(19\d{2}|20\d{2})\b")
+
+
+def parse_year_range(text: str) -> tuple[int, int] | None:
+    """Extract an inclusive year range from free text, if present."""
+    if not text:
+        return None
+    m = _YEAR_RE.search(text)
+    if m:
+        a, b = int(m.group("a")), int(m.group("b"))
+        return (a, b) if a <= b else (b, a)
+    years = [int(y) for y in _YEAR_LIST_RE.findall(text)]
+    if len(years) >= 2:
+        return min(years), max(years)
+    return None
+
+
+def apply_year_range_selections(
+    meta: dict[str, Any],
+    selections: dict[str, Any] | None,
+    text: str,
+) -> dict[str, list[int]]:
+    """If the user asks for a year span, select those years on the period dimension."""
+    out: dict[str, list[int]] = {}
+    if selections:
+        for k, v in selections.items():
+            if isinstance(v, list):
+                out[str(k)] = [int(x) for x in v]
+    yr = parse_year_range(text)
+    if not yr:
+        return out
+    lo, hi = yr
+    dims = meta.get("dimensions") or []
+    for d in dims:
+        lab = (d.get("label") or "").lower()
+        if not any(k in lab for k in ("year", "ani", "perioad", "an ")):
+            continue
+        code = str(d.get("dim_code") or d.get("id") or "")
+        if not code:
+            continue
+        ids: list[int] = []
+        for o in d.get("options") or []:
+            label = str(o.get("label") or "")
+            ys = _YEAR_LIST_RE.findall(label)
+            if not ys:
+                continue
+            y = int(ys[0])
+            if lo <= y <= hi and o.get("nom_item_id") is not None:
+                ids.append(int(o["nom_item_id"]))
+        if ids:
+            out[code] = ids
+        break
+    return out
 
 
 # --- TEMPO selection helpers -------------------------------------------------
