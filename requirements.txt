@@ -1,0 +1,2 @@
+# Server runtime (Docker / uvicorn)
+-e .[server]

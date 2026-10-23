@@ -1,0 +1,23 @@
+# Reference / local-only compose.
+# Production is integrated into the ROEM host stack:
+#   /home/ec2-user/covid19-romania/docker-compose.yml  (service: insseption)
+#   Host rule: insse.csaladen.es via Traefik 1.7
+#
+# On ROEM:
+#   cd /home/ec2-user/covid19-romania
+#   docker-compose up -d --build --no-deps insseption
+
+version: "2.4"
+
+services:
+  insseption:
+    build: .
+    image: insseption:local
+    ports:
+      - "127.0.0.1:8787:8787"
+    env_file:
+      - .env
+    environment:
+      INSSEPTION_STATIC_DIR: /app/web
+    volumes:
+      - ./web:/app/web:ro

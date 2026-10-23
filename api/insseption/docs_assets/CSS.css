@@ -1,0 +1,53 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+:root { --dark-blue:#06090D; --standard-blue:#35577D; --light-blue:#7096C2; --almost-white:#F6F6F6;
+        --muted:rgb(246 246 246 / 58%); --line:rgb(255 255 255 / 8%); --card-bg:#0b101915; --card-hover:#1C233140;
+        --card-border:linear-gradient(to bottom, rgb(255 255 255 / 24%) 0%, rgb(255 255 255 / 4%) 100%);
+        --green:#48bb78; --amber:#ecc94b; --red:#f56565; --grey:#8a93a3;
+        --amber-row:rgb(236 201 75 / 11%); --red-row:rgb(245 101 101 / 14%); }
+* { box-sizing:border-box }
+html { background:var(--dark-blue) }
+body { margin:0; font:300 15px/1.5 Roboto, sans-serif; background:var(--dark-blue); color:var(--almost-white) }
+header { display:flex; align-items:center; gap:28px; padding:16px 28px; border-bottom:1px solid var(--line); flex-wrap:wrap;
+         position:sticky; top:0; background:rgb(6 9 13 / 92%); backdrop-filter:blur(6px); z-index:5 }
+header .brand { font-size:19px; letter-spacing:.2px } header .brand b { font-weight:700 }
+header .brand span { color:var(--light-blue); margin-left:8px; font-size:12px; text-transform:uppercase; letter-spacing:1.5px }
+header nav { display:flex; gap:20px } header a { color:var(--almost-white); text-decoration:none; opacity:.8 }
+header a:hover { opacity:1; text-shadow:0 0 10px #7096C270 }
+header .user { margin-left:auto; color:var(--muted); font-size:13px }
+main { padding:24px 28px 48px; max-width:1500px; margin:0 auto }
+h1 { font-weight:300; font-size:clamp(1.5rem, 0.83rem + 0.98vw, 2rem); margin:0 0 18px }
+h2 { font-weight:300; font-size:20px; margin:30px 0 12px }
+a { color:var(--light-blue) } .muted { color:var(--muted) } .num { text-align:right; font-variant-numeric:tabular-nums }
+.card { position:relative; background:var(--card-bg); border-radius:20px; padding:16px 18px; transition:.4s }
+.card::before { content:""; position:absolute; inset:0; border-radius:20px; padding:1px; background:var(--card-border);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude; pointer-events:none }
+.cards { display:flex; gap:16px; margin-bottom:22px; flex-wrap:wrap }
+.cards .card { min-width:150px; cursor:pointer; user-select:none }
+.cards .card:hover, .cards .card.on { background:var(--card-hover); box-shadow:0 0 13px 5px #35577D80 }
+.cards .card b { display:block; font-size:30px; font-weight:300; margin-top:2px }
+.cards .card.static { cursor:default } .cards .card.static:hover { box-shadow:none; background:var(--card-bg) }
+.tablecard { padding:6px 0 }
+.tablecard .scroll { overflow-x:auto; scrollbar-color:#35577D transparent; border-radius:20px }
+table { border-collapse:collapse; width:100% }
+th, td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top }
+tbody tr:last-child td { border-bottom:0 }
+th { font-weight:400; font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); white-space:nowrap }
+table.sortable th { cursor:pointer } table.sortable th:hover { color:var(--almost-white) }
+th[aria-sort=ascending]::after { content:" \\25B2"; color:var(--light-blue) }
+th[aria-sort=descending]::after { content:" \\25BC"; color:var(--light-blue) }
+tbody tr:hover td { background:rgb(255 255 255 / 3%) }
+tr.red td { background:var(--red-row) } tr.red td:first-child { box-shadow:inset 3px 0 0 var(--red) }
+tr.amber td { background:var(--amber-row) } tr.amber td:first-child { box-shadow:inset 3px 0 0 var(--amber) }
+.dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:8px; vertical-align:1px }
+.dot.green { background:var(--green) } .dot.amber { background:var(--amber) } .dot.red { background:var(--red) }
+.dot.grey { background:var(--grey) }
+.why { font-size:13px; min-width:260px; max-width:420px } td.state { white-space:nowrap } .why.red { color:var(--red) } .why.amber { color:var(--amber) }
+.why.green, .why.grey { color:var(--muted) }
+.pill { font-size:11px; padding:2px 9px; border-radius:10px; border:1px solid var(--line); color:var(--muted); white-space:nowrap }
+.pill.fetcher { color:var(--light-blue); border-color:#7096C266 } .pill.legacy { color:#d6b98c; border-color:#d6b98c55 }
+pre { background:var(--card-bg); border:1px solid var(--line); border-radius:14px; padding:12px; overflow:auto; font-size:12px;
+      color:var(--almost-white) }
+.err { color:var(--red) }
+.note { color:var(--muted); font-size:13px; margin-top:14px; max-width:1100px }

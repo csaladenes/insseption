@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "insseption"
+version = "0.1.0"
+description = "JSON API client (and optional server) for INSSE TEMPO-Online"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Dénes Csala" }]
+keywords = ["insse", "tempo", "romania", "statistics", "api"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dependencies = [
+  "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+server = [
+  "fastapi==0.118.0",
+  "uvicorn==0.37.0",
+  "pydantic==2.11.9",
+  "cachetools==6.2.0",
+  "beautifulsoup4==4.14.2",
+]
+dev = [
+  "pytest>=8.0",
+  "respx>=0.21",
+]
+
+[project.urls]
+Homepage = "https://github.com/csaladenes/insseption"
+Repository = "https://github.com/csaladenes/insseption"
+API = "https://insse.csaladen.es/api/v1"
+
+[project.scripts]
+insseption = "insseption.cli:main"
+
+[tool.setuptools.package-dir]
+"" = "api"
+
+[tool.setuptools.packages.find]
+where = ["api"]

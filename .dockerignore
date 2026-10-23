@@ -1,0 +1,15 @@
+.git
+.venv
+venv
+.netlify
+node_modules
+__pycache__
+*.pyc
+.env
+.env.*
+web
+scripts
+PLAN.md
+*.md
+!README.md
+!LICENSE

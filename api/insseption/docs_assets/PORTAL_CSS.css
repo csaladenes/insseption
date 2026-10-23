@@ -1,0 +1,12 @@
+
+.hero { max-width: 760px; } .hero p { color: var(--muted); }
+.btn { display: inline-flex; align-items: center; gap: .6rem; padding: 12px 22px; border-radius: 100px; border: 1px solid #7096C266;
+       background: var(--card-bg); color: var(--almost-white); font: inherit; cursor: pointer; text-decoration: none; }
+.btn:hover, .btn:focus-visible { color: var(--light-blue); box-shadow: 0 0 13px 5px #35577D80; outline: none; }
+.btn.small { padding: 6px 14px; font-size: 13px; } .btn.danger:hover { color: var(--red); }
+form.inline { display: inline; }
+input[type=text] { background: var(--card-bg); color: var(--almost-white); border: 1px solid var(--line); border-radius: 100px;
+                   padding: 10px 16px; font: inherit; min-width: 260px; }
+.keybox { font: 15px Consolas, Menlo, monospace; padding: 14px 18px; border: 1px solid #7096C266; border-radius: 14px;
+          background: var(--card-bg); word-break: break-all; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
