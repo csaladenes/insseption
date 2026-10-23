@@ -482,8 +482,10 @@ class TempoAgent:
             "no html/body/script tags.\n"
             "Rules:\n"
             "- Answer in the same language as the question.\n"
-            "- Summarise the cleaned numbers; cite the matrix code inline when useful.\n"
-            "- If errored/empty: say so and suggest a matrix code — do not invent values.\n"
+            "- Summarise the cleaned numbers in plain language (population, jobs, counties…).\n"
+            "- Prefer everyday wording over jargon. You may mention the official table "
+            "code once in parentheses if useful, but do not say 'matrix'.\n"
+            "- If errored/empty: say so and suggest what to ask next — do not invent values.\n"
             "- Never mention steps, preflight, pipeline, or internal planning.\n"
             "- Do not invent numbers; use only sample_rows / presentation_table."
         )

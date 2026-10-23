@@ -1,5 +1,5 @@
 /**
- * Ask TEMPO agent — landing UI at / (ORI-style stage, RoEM theme).
+ * Public explore UI at / — plain-language statistics assistant.
  * Agent: ${origin}/agent  · skill: insseption-agents
  */
 const AGENT_BASE =
@@ -138,9 +138,9 @@ async function renderChoropleth(host, chart) {
 }
 
 const EXAMPLES = [
-  "What is Romania's usually resident population (POP105A)?",
-  "Show recent INSSE TEMPO updates",
-  "Average number of employees by county — latest year",
+  "How many people live in Romania?",
+  "How many employees are there in each county?",
+  "What is the latest population figure for Bucharest?",
 ];
 
 export function mountChat() {
@@ -156,10 +156,10 @@ export function mountChat() {
   });
 
   const head = el("div", { className: "insse-chat-head" }, [
-    el("strong", { text: "Ask TEMPO" }),
+    el("strong", { text: "Explore statistics" }),
     el("span", {
       className: "insse-chat-sub",
-      text: "Natural language → INSSE matrices, charts, and county maps",
+      text: "Ask a question — get official figures, charts, and county maps",
     }),
   ]);
 
@@ -170,11 +170,11 @@ export function mountChat() {
   const form = el("form", { className: "insse-chat-form" });
   const input = el("textarea", {
     rows: "3",
-    placeholder: "Ask about Romanian statistics in RO / EN / HU…",
+    placeholder: "Try: How many people live in Romania? (RO / EN / HU)",
     maxlength: "2000",
     autofocus: "true",
   });
-  const send = el("button", { type: "submit", className: "btn", text: "Ask TEMPO" });
+  const send = el("button", { type: "submit", className: "btn", text: "Ask" });
   form.append(input, send);
   panel.append(head, msgs, form);
   root.append(panel);
@@ -234,10 +234,10 @@ export function mountChat() {
           el("button", {
             type: "button",
             className: "btn small",
-            text: "Download CSV",
+            text: "Download table (CSV)",
             onClick: () =>
               downloadBlob(
-                `${payload.matrix || "tempo"}.csv`,
+                `${payload.matrix || "romania-statistics"}.csv`,
                 new Blob([tableToCsv(table)], { type: "text/csv;charset=utf-8" })
               ),
           })
@@ -247,7 +247,7 @@ export function mountChat() {
         el("button", {
           type: "button",
           className: "btn small",
-          text: "Download PNG",
+          text: "Download chart (PNG)",
           onClick: async () => {
             const target =
               exportNode?.mapDiv ||
@@ -257,7 +257,7 @@ export function mountChat() {
             if (exportNode?.canvas?.toDataURL) {
               const a = el("a", {
                 href: exportNode.canvas.toDataURL("image/png"),
-                download: `${payload.matrix || "tempo"}.png`,
+                download: `${payload.matrix || "romania-statistics"}.png`,
               });
               document.body.appendChild(a);
               a.click();
@@ -270,7 +270,7 @@ export function mountChat() {
                 scale: 2,
               });
               downloadBlob(
-                `${payload.matrix || "tempo"}.png`,
+                `${payload.matrix || "romania-statistics"}.png`,
                 await new Promise((res) =>
                   shot.toBlob((b) => res(b), "image/png")
                 )
@@ -309,8 +309,8 @@ export function mountChat() {
 
   addMsg(
     "bot",
-    `<p>Ask about Romanian statistics in <strong>RO / EN / HU</strong>. I’ll pull INSSE TEMPO figures and show a chart or county map when it helps.</p>
-     <p class="insse-chat-meta">Guide: <a href="/docs">/docs</a> · OpenAPI: <a href="/docs/reference">/docs/reference</a></p>`
+    `<p>Ask a question in <strong>Romanian, English or Hungarian</strong> — for example about population or jobs. I’ll find the official figures and show a chart or map when it helps.</p>
+     <p class="insse-chat-meta">More detail: <a href="/docs">About the data</a> · <a href="/docs/reference">For developers</a></p>`
   );
 
   form.addEventListener("submit", async (ev) => {
@@ -323,7 +323,7 @@ export function mountChat() {
     send.textContent = "…";
     const thinking = el("div", {
       className: "insse-chat-msg bot pending",
-      text: "Querying TEMPO…",
+      text: "Looking up the latest figures…",
     });
     msgs.appendChild(thinking);
     msgs.scrollTop = msgs.scrollHeight;
@@ -338,7 +338,7 @@ export function mountChat() {
       if (!res.ok) {
         await addMsg(
           "bot",
-          `<p>Agent error: ${(
+          `<p>Sorry — something went wrong: ${(
             data.detail ||
             res.statusText ||
             ""
@@ -357,11 +357,11 @@ export function mountChat() {
       thinking.remove();
       await addMsg(
         "bot",
-        `<p>Network error: ${String(err.message || err)}</p>`
+        `<p>Could not reach the statistics service: ${String(err.message || err)}</p>`
       );
     } finally {
       send.disabled = false;
-      send.textContent = "Ask TEMPO";
+      send.textContent = "Ask";
       input.focus();
     }
   });
