@@ -39,6 +39,29 @@ except ImportError:
     from src.session import history_text, load_session, save_turn
 
 CODE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{2,19}$")
+SYNONYMS: dict[str, tuple[str, ...]] = {
+    "șomaj": ("unemploy",), "somaj": ("unemploy",), "munkanélk": ("unemploy",),
+    "rata": ("rate",), "ráta": ("rate",), "arány": ("rate",),
+    "județ": ("counties",), "judet": ("counties",), "megy": ("counties",),
+    "popula": ("population",), "népess": ("population",), "locuitor": ("population",),
+    "salari": ("earnings", "employees"), "câștig": ("earnings",), "castig": ("earnings",),
+    "fizet": ("earnings",), "bér": ("earnings",), "angajaț": ("employees",),
+    "turist": ("tourist", "arrivals"), "turism": ("tourist",), "cazar": ("accommodation",),
+    "inflați": ("consumer price",), "inflati": ("consumer price",), "infláci": ("consumer price",),
+    "prețur": ("price",), "preturi": ("price",), "ár": ("price",),
+    "nașter": ("live-born", "live-birth"), "naster": ("live-born", "live-birth"),
+    "născu": ("live-born",), "születés": ("live-born", "live-birth"),
+    "átlagbér": ("average", "earnings"), "salariul": ("average", "earnings"), "decese": ("deaths",), "deces": ("deaths",),
+    "halálozás": ("deaths",), "căsător": ("marriages",), "casator": ("marriages",),
+    "divorț": ("divorces",), "emigr": ("emigrants",), "imigr": ("immigrants",),
+    "locuin": ("dwellings",), "lakás": ("dwellings",), "elev": ("pupils",),
+    "student": ("students",), "școl": ("school",), "spital": ("hospital",),
+    "medic": ("physicians",), "export": ("exports",), "import": ("imports",),
+    "pib": ("gross domestic product",), "gdp": ("gross domestic product",),
+    "agricult": ("agricultural",), "recolt": ("production",), "energie": ("energy",),
+    "pensi": ("pension",), "nyugdíj": ("pension",), "infracți": ("crime",),
+    "vârst": ("age",), "korcsop": ("age",),
+}
 LLM_TIMEOUT_S = float(os.getenv("AGENT_LLM_TIMEOUT_S", "35"))
 log = logging.getLogger("insseption.agent")
 
@@ -440,6 +463,11 @@ class TempoAgent:
     def _catalog_snippet(self, query: str, limit: int = 40) -> str:
         q = query.lower()
         tokens = [t for t in re.split(r"\W+", q) if len(t) >= 3]
+        # Catalogue names are English-only.
+        for t in list(tokens):
+            for stem, words in SYNONYMS.items():
+                if t.startswith(stem) or (len(stem) >= 5 and stem in t):
+                    tokens.extend(words)
         scored: list[tuple[int, dict[str, str]]] = []
         for row in self.catalog:
             name = (row.get("name") or "").lower()
@@ -457,7 +485,7 @@ class TempoAgent:
         if not picks:
             picks = self.catalog[:25]
         ql = query.lower()
-        if any(k in ql for k in ("county", "counties", "jude", "employee", "salariat")):
+        if any(k in ql for k in ("employee", "salariat", "angajat", "alkalmazott")):
             for code in ("FOM104F", "FOM104D"):
                 if not any(p.get("code") == code for p in picks):
                     hit = next((r for r in self.catalog if r.get("code") == code), None)
