@@ -431,7 +431,10 @@ def expand_county_selections(meta: dict[str, Any], selections: dict[str, Any] | 
                 for o in opts
                 if o.get("nom_item_id") is not None and _is_county_option(o.get("label") or "")
             ]
-        elif any(k in lab for k in ("year", "ani", "perioad")):
+        elif any(
+            k in lab
+            for k in ("year", "ani", "perioad", "luni", "month", "trimestr", "quarter", "év", "hónap", "negyedév")
+        ):
             out[code] = [int(opts[-1]["nom_item_id"])]
         elif any(k in lab for k in ("nace", "activit", "caen")):
             total = next(

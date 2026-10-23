@@ -30,5 +30,6 @@
   "docs_path": "/docs/ro",
   "ref_path": "/docs/ro/reference",
   "context_reset": "Contextul conversației a fost resetat după 30 de minute de inactivitate.",
-  "map_legend": "Legendă (quintile)"
+  "map_legend": "Legendă (quintile)",
+  "error_timeout": "Interogarea a durat prea mult. Încearcă o întrebare mai precisă (un an, o regiune)."
 }

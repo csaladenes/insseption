@@ -5,7 +5,9 @@ Skill: insseption-agents
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -37,6 +39,8 @@ except ImportError:
     from src.session import history_text, load_session, save_turn
 
 CODE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{2,19}$")
+LLM_TIMEOUT_S = float(os.getenv("AGENT_LLM_TIMEOUT_S", "35"))
+log = logging.getLogger("insseption.agent")
 
 MASTER_PIPELINE = """
 You are the insseption TEMPO agent for Romania INSSE statistics.
@@ -392,10 +396,25 @@ class TempoAgent:
             "HTTP-Referer": self.referrer,
             "X-Title": self.title,
         }
-        async with httpx.AsyncClient(timeout=90.0) as client:
-            resp = await client.post(
-                f"{self.base_url}/chat/completions", headers=headers, json=body
-            )
+        resp = None
+        async with httpx.AsyncClient(timeout=LLM_TIMEOUT_S) as client:
+            for attempt in range(2):
+                try:
+                    resp = await client.post(
+                        f"{self.base_url}/chat/completions", headers=headers, json=body
+                    )
+                except httpx.TimeoutException:
+                    if attempt:
+                        raise RuntimeError(f"OpenRouter timeout ({model})")
+                    log.warning("openrouter timeout model=%s, retrying", model)
+                    continue
+                if resp.status_code in (429, 500, 502, 503, 504) and not attempt:
+                    log.warning(
+                        "openrouter HTTP %s model=%s, retrying", resp.status_code, model
+                    )
+                    await asyncio.sleep(1.5)
+                    continue
+                break
         if resp.status_code >= 400:
             raise RuntimeError(f"OpenRouter HTTP {resp.status_code}: {resp.text[:200]}")
         content = (

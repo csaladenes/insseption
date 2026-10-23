@@ -699,18 +699,36 @@ async function mountChat() {
         localStorage.removeItem(SESSION_KEY);
         localStorage.removeItem(HISTORY_KEY);
       }
-      const res = await fetch(`${AGENT_BASE}/api/query`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          query: q,
-          generate_chart: true,
-          lang,
-          session_id: getSessionId(),
-          history,
-        }),
+      const payload = JSON.stringify({
+        query: q,
+        generate_chart: true,
+        lang,
+        session_id: getSessionId(),
+        history,
       });
-      const data = await res.json();
+      let res;
+      let data = {};
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 95000);
+        try {
+          res = await fetch(`${AGENT_BASE}/api/query`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: payload,
+            signal: ctl.signal,
+          });
+        } finally {
+          clearTimeout(timer);
+        }
+        const raw = await res.text();
+        try {
+          data = JSON.parse(raw);
+        } catch (_) {
+          data = { detail: "" };
+        }
+        if (![502, 503, 504, 524].includes(res.status)) break;
+      }
       thinking.remove();
       if (data.session_id) localStorage.setItem(SESSION_KEY, data.session_id);
       // keep a light client history for resume / first hop
@@ -746,12 +764,11 @@ async function mountChat() {
       }
     } catch (err) {
       thinking.remove();
-      await addMsg(
-        "bot",
-        `<p>${dict.error_network || "Network error"}: ${String(
-          err.message || err
-        )}</p>`
-      );
+      const msg =
+        err && err.name === "AbortError"
+          ? dict.error_timeout || "The query took too long."
+          : dict.error_network || "Network error";
+      await addMsg("bot", `<p>${msg}</p>`);
     } finally {
       send.disabled = false;
       send.textContent = dict.ask || "Ask";

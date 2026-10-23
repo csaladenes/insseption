@@ -5,7 +5,10 @@ Public path: /agent/* (reverse-proxied by the API container).
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
+import time
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -74,6 +77,17 @@ class QueryResponse(BaseModel):
     context_notice: Optional[str] = None
 
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+log = logging.getLogger("insseption.agent")
+# Cloudflare drops proxied requests at ~100s; finish before that.
+DEADLINE_S = float(os.getenv("AGENT_DEADLINE_S", "85"))
+TIMEOUT_MSG = {
+    "ro": "Interogarea a durat prea mult. Încearcă o întrebare mai precisă (un an, o regiune).",
+    "en": "The query took too long. Try a more specific question (one year, one region).",
+    "hu": "A lekérdezés túl sokáig tartott. Próbálj pontosabb kérdést (egy év, egy régió).",
+}
+
+
 @app.post("/api/query", response_model=QueryResponse)
 async def query_data(request: QueryRequest):
     agent = get_agent()
@@ -82,20 +96,44 @@ async def query_data(request: QueryRequest):
             status_code=503,
             detail="Agent not initialized. Check OPENROUTER_API_KEY.",
         )
+    t0 = time.monotonic()
     try:
-        result = await agent.query(
-            request.query,
-            generate_chart=request.generate_chart,
-            lang=request.lang,
-            session_id=request.session_id,
-            history=request.history,
+        result = await asyncio.wait_for(
+            agent.query(
+                request.query,
+                generate_chart=request.generate_chart,
+                lang=request.lang,
+                session_id=request.session_id,
+                history=request.history,
+            ),
+            timeout=DEADLINE_S,
+        )
+        log.info(
+            "query ok %.1fs lang=%s matrix=%s err=%s q=%r",
+            time.monotonic() - t0,
+            request.lang,
+            result.get("matrix"),
+            (result.get("error") or "")[:120],
+            request.query[:80],
         )
         return QueryResponse(**result)
+    except asyncio.TimeoutError:
+        log.error(
+            "query TIMEOUT %.1fs lang=%s q=%r",
+            time.monotonic() - t0,
+            request.lang,
+            request.query[:80],
+        )
+        return QueryResponse(
+            answer="",
+            error=TIMEOUT_MSG.get(request.lang or "ro", TIMEOUT_MSG["en"]),
+            session_id=request.session_id,
+        )
     except Exception as exc:
-        import traceback
-
-        print(traceback.format_exc())
-        return QueryResponse(answer="", error=str(exc))
+        log.exception(
+            "query FAILED %.1fs q=%r", time.monotonic() - t0, request.query[:80]
+        )
+        return QueryResponse(answer="", error=str(exc), session_id=request.session_id)
 
 
 @app.get("/health")

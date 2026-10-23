@@ -30,5 +30,6 @@
   "docs_path": "/docs/hu",
   "ref_path": "/docs/hu/reference",
   "context_reset": "A beszélgetés kontextusa 30 perc inaktivitás után törlődött.",
-  "map_legend": "Jelmagyarázat (kvintilisek)"
+  "map_legend": "Jelmagyarázat (kvintilisek)",
+  "error_timeout": "A lekérdezés túl sokáig tartott. Próbálj pontosabb kérdést (egy év, egy régió)."
 }
