@@ -264,7 +264,7 @@ def create_app() -> FastAPI:
             "base": "/api/v1",
             "docs": "/docs",
             "openapi": "/openapi.json",
-            "python_client": "pip install insseption  # or: pip install .",
+            "python_client": 'pip install "git+https://github.com/csaladenes/insseption.git"',
             "endpoints": ENDPOINTS,
             "attribution": config.ATTRIBUTION,
             "terms_url": config.TERMS_URL,
@@ -287,6 +287,46 @@ def create_app() -> FastAPI:
         if "application/json" in (response.headers.get("content-type") or ""):
             response.headers["X-Content-Type-Options"] = "nosniff"
         return response
+
+
+    agent_url = os.environ.get(
+        "INSSEPTION_AGENT_URL", "http://insseption-agent:8000"
+    ).rstrip("/")
+
+    @app.api_route("/agent", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"])
+    @app.api_route("/agent/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"])
+    async def agent_proxy(request: Request, path: str = ""):
+        """Reverse-proxy to the separate insseption-agent container."""
+        import httpx
+
+        target = f"{agent_url}/{path}" if path else f"{agent_url}/"
+        if request.url.query:
+            target = f"{target}?{request.url.query}"
+        headers = {
+            k: v
+            for k, v in request.headers.items()
+            if k.lower() not in {"host", "content-length", "transfer-encoding"}
+        }
+        body = await request.body()
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                upstream = await client.request(
+                    request.method, target, headers=headers, content=body
+                )
+        except httpx.HTTPError as exc:
+            return ApiJSONResponse(
+                {"detail": f"agent unreachable: {exc}"}, status_code=502
+            )
+        excluded = {"content-encoding", "transfer-encoding", "content-length", "connection"}
+        out_headers = {
+            k: v for k, v in upstream.headers.items() if k.lower() not in excluded
+        }
+        return Response(
+            content=upstream.content,
+            status_code=upstream.status_code,
+            headers=out_headers,
+            media_type=upstream.headers.get("content-type"),
+        )
 
     static_dir = os.environ.get("INSSEPTION_STATIC_DIR", "").strip()
     if static_dir:

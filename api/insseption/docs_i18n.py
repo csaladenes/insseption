@@ -54,11 +54,11 @@ RECIPES = {'browse': {'ro': ('Răsfoiți arborele TEMPO',
                  'feladatokhoz.')},
  'package': {'ro': ('Folosiți pachetul Python',
                     'Aceleași apeluri fără URL-uri scrise de mână: <code>pip install '
-                    'insseption</code> (sau din acest repo). <code>Client</code> oglindește '
+                    '"git+https://github.com/csaladenes/insseption.git"</code> (sau din acest repo). <code>Client</code> oglindește '
                     'fiecare rută HTTP și întoarce JSON parsat.'),
              'hu': ('A Python csomag használata',
                     'Ugyanazok a hívások kézzel írt URL nélkül: <code>pip install '
-                    'insseption</code> (vagy ebből a repóból). A <code>Client</code> minden '
+                    '"git+https://github.com/csaladenes/insseption.git"</code> (vagy ebből a repóból). A <code>Client</code> minden '
                     'HTTP-útvonalat tükröz, és parse-olt JSON-t ad.')}}
 
 REFERENCE = {'/api/v1/health|GET': {'ro': ('Disponibilitate și accesibilitatea amonte',

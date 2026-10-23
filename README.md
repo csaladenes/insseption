@@ -13,9 +13,12 @@ Production target: **https://insse.csaladen.es** (ROEM AWS / Traefik)
 
 ## Python client
 
+Not on PyPI yet — install from GitHub (or a local checkout):
+
 ```bash
+pip install "git+https://github.com/csaladenes/insseption.git"
+# or, from a clone:
 pip install .
-# or, once published: pip install insseption
 ```
 
 ```python
@@ -96,6 +99,23 @@ cd /home/ec2-user/covid19-romania
 # edit/sync ./insseption (rsync --exclude .env) and ensure ./insseption/.env (OPENROUTER_API_KEY). Guide: https://insse.csaladen.es/docs
 docker-compose up -d --build --no-deps insseption
 curl -sS https://insse.csaladen.es/api/v1/health
+```
+
+## Floating chat agent (separate container)
+
+GEM-style NL agent in `./agent` (OpenRouter → TEMPO via the JSON API). The agent
+container stays on the internal Docker network; the API reverse-proxies `/agent/*`:
+
+| URL | Purpose |
+|-----|---------|
+| https://insse.csaladen.es/index.html | UI + bottom-right chat FAB |
+| https://insse.csaladen.es/agent/health | Agent health |
+| `POST` https://insse.csaladen.es/agent/api/query | `{ "query": "...", "generate_chart": true }` |
+
+```bash
+# on ROEM (after syncing ./insseption/agent and compose service)
+docker-compose up -d --build --no-deps insseption insseption-agent
+curl -sS https://insse.csaladen.es/agent/health
 ```
 
 ## License

@@ -1,0 +1,29 @@
+# Snippet merged into ~/covid19-romania/docker-compose.yml on ROEM.
+# Agent stays on the internal docker network; the insseption API reverse-proxies
+#   https://insse.csaladen.es/agent/*  →  http://insseption-agent:8000/*
+
+  insseption-agent:
+    build: ./insseption/agent
+    image: covid19-romania_insseption-agent
+    user: "0"
+    container_name: insseption-agent
+    hostname: insseption-agent
+    restart: always
+    env_file: ./insseption/.env
+    volumes:
+      - ./insseption/agent/src:/app/src:ro
+      - ./insseption/agent/config:/app/config:ro
+    environment:
+      - INSSEPTION_API_URL=http://insseption:8787/api/v1
+      - CATALOG_PATH=/app/config/catalog.json
+      - LLM_MODEL=openai/gpt-4.1-nano
+      - OPENROUTER_REFERRER=https://insse.csaladen.es
+      - OPENROUTER_TITLE=insseption agent
+    mem_limit: 384m
+    cpus: 0.4
+    labels:
+      - traefik.enable=false
+    networks:
+      - internal
+    depends_on:
+      - insseption

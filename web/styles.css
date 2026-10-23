@@ -267,3 +267,57 @@ th {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* —— floating chat (GEM-style FAB) —— */
+.insse-chat { position: fixed; right: 1.1rem; bottom: 1.1rem; z-index: 9999; font-family: var(--font-body); }
+.insse-chat-fab {
+  width: 3.4rem; height: 3.4rem; border-radius: 999px; border: 0;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 12px 30px rgba(11, 61, 145, 0.35); cursor: pointer;
+}
+.insse-chat-fab:hover { transform: translateY(-1px); }
+.insse-chat-panel {
+  position: absolute; right: 0; bottom: 4.1rem;
+  width: min(380px, calc(100vw - 1.5rem)); height: min(520px, calc(100vh - 6rem));
+  display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 1rem;
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.insse-chat-panel[hidden] { display: none !important; }
+.insse-chat-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 0.5rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #fff, #f7f2e8);
+}
+.insse-chat-head strong { display: block; font-family: var(--font-display); font-size: 1.1rem; }
+.insse-chat-sub { color: var(--muted); font-size: 0.78rem; }
+.insse-chat-close {
+  border: 0; background: transparent; font-size: 1.4rem; line-height: 1;
+  color: var(--muted); cursor: pointer; padding: 0 0.2rem;
+}
+.insse-chat-msgs { flex: 1; overflow: auto; padding: 0.85rem; display: grid; gap: 0.65rem; }
+.insse-chat-msg {
+  padding: 0.65rem 0.8rem; border-radius: 0.75rem; font-size: 0.92rem; line-height: 1.4;
+  border: 1px solid var(--line); background: #fff;
+}
+.insse-chat-msg.user { background: rgba(11, 61, 145, 0.08); border-color: transparent; }
+.insse-chat-msg.pending { color: var(--muted); font-style: italic; }
+.insse-chat-html p { margin: 0 0 0.5rem; }
+.insse-chat-html ul { margin: 0.25rem 0 0.5rem; padding-left: 1.1rem; }
+.insse-chat-html table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.insse-chat-html td, .insse-chat-html th { border-bottom: 1px solid var(--line); padding: 0.2rem 0.3rem; text-align: left; }
+.insse-chat-ex {
+  border: 0; background: transparent; color: var(--accent); text-align: left;
+  cursor: pointer; padding: 0; font: inherit;
+}
+.insse-chat-ex:hover { text-decoration: underline; }
+.insse-chat-meta { margin-top: 0.4rem !important; color: var(--muted); font-size: 0.78rem; }
+.insse-chat-chart { width: 100% !important; max-height: 180px; margin-top: 0.5rem; }
+.insse-chat-form {
+  display: grid; grid-template-columns: 1fr auto; gap: 0.45rem;
+  padding: 0.7rem; border-top: 1px solid var(--line); background: #fffdf8;
+}
+.insse-chat-form textarea {
+  resize: none; border: 1px solid var(--line); border-radius: 0.5rem;
+  padding: 0.55rem 0.7rem; font: inherit; background: #fff;
+}
