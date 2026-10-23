@@ -1,6 +1,6 @@
 """Chart builders for the insseption agent (bar / line / Romania county map).
 
-Follows skill: insseption-charts.
+Follows skill: insseption-agents.
 """
 
 from __future__ import annotations
@@ -190,7 +190,7 @@ def build_chart(
     *,
     force_kind: str | None = None,
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
-    """Return (chart, table) following insseption-charts skill."""
+    """Return (chart, table) following insseption-agents skill."""
     labels, values, table_rows = extract_series(data)
     if not values:
         return None, None

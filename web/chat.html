@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chat · insseption API</title>
+  <meta name="description" content="Ask TEMPO — Romania INSSE statistics via insseption." />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <script src="https://unpkg.com/topojson-client@3/dist/topojson-client.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+</head>
+<body>
+  <header>
+    <div class="brand">insseption <b>API</b><span>Ask TEMPO</span></div>
+    <nav>
+      <a href="/docs">Guide</a>
+      <a href="/docs/reference">Reference</a>
+      <a href="/chat" aria-current="page">Chat</a>
+      <a href="https://github.com/csaladenes/insseption" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </header>
+  <main class="chat-main">
+    <div id="insse-chat-mount"></div>
+    <p class="note">Sursa: Institutul Național de Statistică – TEMPO-Online. Unofficial mirror; no endorsement implied.</p>
+  </main>
+  <script type="module" src="./chat.js"></script>
+</body>
+</html>

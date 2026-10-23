@@ -3,7 +3,8 @@
 Shipped:
 
 - JSON API + Python client (`pip install insseption`) for INSSE TEMPO-Online
-- Production: https://insse.csaladen.es — chat UI at `/`, API at `/api/v1`, docs at `/docs`
+- Production: https://insse.csaladen.es — docs at `/`→`/docs`, chat at `/chat`, API at `/api/v1`, agent at `/agent`
+- Skill: `insseption-agents` (charts / county maps / CSV·PNG)
 - Separate `insseption-agent` container (OpenRouter → TEMPO), proxied under `/agent/*`
 - Host smoke: `python3 scripts/harness.py`
 

@@ -52,6 +52,7 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     answer: str = ""
     chart: Optional[dict] = None
+    table: Optional[dict] = None
     plan: Optional[dict] = None
     matrix: Optional[str] = None
     columns: Optional[list] = None

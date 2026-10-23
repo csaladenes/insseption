@@ -10,7 +10,7 @@ from pathlib import Path as FsPath
 
 from fastapi import APIRouter, FastAPI, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
@@ -329,17 +329,24 @@ def create_app() -> FastAPI:
         )
 
     static_dir = os.environ.get("INSSEPTION_STATIC_DIR", "").strip()
-    mounted = False
-    if static_dir:
-        root = FsPath(static_dir)
-        if root.is_dir():
-            # Chat UI is the front page; JSON discovery stays under /api
-            app.mount("/", StaticFiles(directory=str(root), html=True), name="ui")
-            mounted = True
-    if not mounted:
-        @app.get("/", response_class=ApiJSONResponse)
-        async def root():
-            return _service_root()
+    static_root = FsPath(static_dir) if static_dir else None
+
+    @app.get("/chat", include_in_schema=False)
+    @app.get("/chat/", include_in_schema=False)
+    async def chat_ui():
+        if static_root and (static_root / "chat.html").is_file():
+            return FileResponse(static_root / "chat.html")
+        return RedirectResponse("/docs", status_code=302)
+
+    @app.get("/", include_in_schema=False)
+    async def site_root():
+        # Docs are the landing page; Chat lives under /chat (see header nav).
+        if static_root and static_root.is_dir():
+            return RedirectResponse("/docs", status_code=302)
+        return ApiJSONResponse(_service_root())
+
+    if static_root and static_root.is_dir():
+        app.mount("/", StaticFiles(directory=str(static_root), html=True), name="ui")
 
     return app
 

@@ -1,6 +1,6 @@
 """
-Natural-language → insseption TEMPO API → HTML answer (+ optional Chart.js).
-Natural-language agent that talks HTTP to the insseption JSON tunnel.
+Natural-language → insseption TEMPO API → HTML answer (+ charts / county map).
+Skill: insseption-agents
 """
 
 from __future__ import annotations
@@ -12,6 +12,11 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+
+try:
+    from charts import build_chart, expand_county_selections, looks_like_county_query
+except ImportError:
+    from src.charts import build_chart, expand_county_selections, looks_like_county_query
 
 MODEL = "deepseek/deepseek-v4.1-flash"
 CODE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{2,19}$")
@@ -56,33 +61,69 @@ class TempoAgent:
         data: dict[str, Any] | None = None
         meta: dict[str, Any] | None = None
         api_error: str | None = None
+        chart = None
+        table = None
 
         if matrix and CODE_RE.match(matrix):
             try:
-                async with httpx.AsyncClient(timeout=60.0) as client:
+                async with httpx.AsyncClient(timeout=90.0) as client:
                     meta_resp = await client.get(
                         f"{self.insse}/matrices/{matrix}", params={"lang": lang}
                     )
                     if meta_resp.status_code < 400:
                         meta = meta_resp.json()
-                    q_resp = await client.post(
-                        f"{self.insse}/matrices/{matrix}/query",
-                        params={"lang": lang},
-                        json={"lang": lang, "selections": selections or {}},
+
+                    want_county = looks_like_county_query(user_query, [])
+                    if want_county and meta:
+                        selections = expand_county_selections(meta, selections)
+                        plan["selections"] = selections
+                        # Prefer FOM104F-family for county employment maps
+                        if "employee" in user_query.lower() or "salariat" in user_query.lower():
+                            if not matrix.startswith("FOM104"):
+                                for cand in ("FOM104F", "FOM104D", "FOM104A"):
+                                    if any(r.get("code") == cand for r in self.catalog):
+                                        matrix = cand
+                                        plan["matrix"] = matrix
+                                        meta_resp = await client.get(
+                                            f"{self.insse}/matrices/{matrix}",
+                                            params={"lang": lang},
+                                        )
+                                        if meta_resp.status_code < 400:
+                                            meta = meta_resp.json()
+                                            selections = expand_county_selections(
+                                                meta, {}
+                                            )
+                                            plan["selections"] = selections
+                                        break
+
+                    data, api_error = await self._run_query(
+                        client, matrix, lang, selections
                     )
-                    if q_resp.status_code >= 400:
-                        api_error = f"query HTTP {q_resp.status_code}: {q_resp.text[:200]}"
-                    else:
-                        data = q_resp.json()
+
+                    # Retry once with county expansion if sparse result on county ask
+                    if (
+                        want_county
+                        and meta
+                        and data
+                        and len(data.get("rows") or []) < 10
+                    ):
+                        selections = expand_county_selections(meta, {})
+                        plan["selections"] = selections
+                        data2, err2 = await self._run_query(
+                            client, matrix, lang, selections
+                        )
+                        if data2 and len(data2.get("rows") or []) > len(
+                            data.get("rows") or []
+                        ):
+                            data, api_error = data2, err2
             except httpx.HTTPError as exc:
                 api_error = str(exc)
         else:
             api_error = plan.get("note") or "No matrix code selected"
 
         answer = await self._answer(user_query, plan, meta, data, api_error)
-        chart = None
         if generate_chart and data and data.get("rows"):
-            chart = self._chart_js(user_query, data)
+            chart, table = build_chart(user_query, data)
 
         return {
             "answer": answer,
@@ -91,8 +132,25 @@ class TempoAgent:
             "data": (data or {}).get("rows") if data else None,
             "columns": (data or {}).get("columns") if data else None,
             "chart": chart,
+            "table": table,
             "error": api_error,
         }
+
+    async def _run_query(
+        self,
+        client: httpx.AsyncClient,
+        matrix: str,
+        lang: str,
+        selections: dict[str, Any],
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        q_resp = await client.post(
+            f"{self.insse}/matrices/{matrix}/query",
+            params={"lang": lang},
+            json={"lang": lang, "selections": selections or {}},
+        )
+        if q_resp.status_code >= 400:
+            return None, f"query HTTP {q_resp.status_code}: {q_resp.text[:200]}"
+        return q_resp.json(), None
 
     async def _chat(self, system: str, user: str, temperature: float = 0) -> str:
         body = {
@@ -154,6 +212,14 @@ class TempoAgent:
         picks = [r for _, r in scored[:limit]]
         if not picks:
             picks = self.catalog[:25]
+        # Bias employment-by-county toward FOM104F
+        ql = query.lower()
+        if any(k in ql for k in ("county", "counties", "jude", "employee", "salariat")):
+            for code in ("FOM104F", "FOM104D"):
+                if not any(p.get("code") == code for p in picks):
+                    hit = next((r for r in self.catalog if r.get("code") == code), None)
+                    if hit:
+                        picks.insert(0, hit)
         return "\n".join(f"{r['code']}\t{r.get('name','')}" for r in picks)
 
     async def _plan(self, user_query: str) -> dict[str, Any]:
@@ -161,11 +227,12 @@ class TempoAgent:
         system = (
             "You plan read-only queries against the Romania INSSE TEMPO API via insseption. "
             "Return ONLY a JSON object with keys: "
-            "matrix (TEMPO code like POP105A or null), "
+            "matrix (TEMPO code like POP105A or FOM104F or null), "
             "lang ('ro' or 'en'), "
             "selections (object mapping dimension id strings to arrays of nomItemId ints; "
-            "use {} for defaults = totals / latest year), "
+            "use {} for defaults — the server expands county maps), "
             "note (short rationale). "
+            "For average employees / salariati by county / județ / map, prefer FOM104F. "
             "Prefer well-known codes from the catalogue. Never invent codes."
         )
         user = f"Question: {user_query}\n\nCatalogue candidates:\n{catalog}"
@@ -220,66 +287,3 @@ class TempoAgent:
         if not raw.startswith("<"):
             raw = f"<p>{raw}</p>"
         return raw
-
-    @staticmethod
-    def _chart_js(query: str, data: dict[str, Any]) -> dict[str, Any] | None:
-        columns = data.get("columns") or []
-        rows = data.get("rows") or []
-        if len(columns) < 2 or not rows:
-            return None
-        # pick last numeric-ish column as values, first as labels
-        label_i = 0
-        value_i = len(columns) - 1
-        labels: list[str] = []
-        values: list[float] = []
-        for row in rows[:40]:
-            if not isinstance(row, (list, tuple)) or len(row) <= value_i:
-                continue
-            label = re.sub(r"<[^>]+>", "", str(row[label_i])).strip()
-            # Skip TEMPO header / unit rows echoed as data
-            if not label or label.lower() in {c.lower() for c in columns}:
-                continue
-            if label.lower().startswith(("mu:", "um:", "year ", "anul ")):
-                continue
-            raw = re.sub(r"<[^>]+>", "", str(row[value_i]))
-            raw = re.sub(r"[^\d.\-]", "", raw.replace(",", ""))
-            try:
-                val = float(raw)
-            except (TypeError, ValueError):
-                continue
-            # Years masquerading as values (e.g. 2026) — keep only if no larger series
-            values.append(val)
-            labels.append(label[:48])
-        if not values:
-            return None
-        # Drop year-like points when a real magnitude exists alongside them
-        if any(v >= 10_000 for v in values):
-            kept = [(l, v) for l, v in zip(labels, values) if v < 1900 or v > 2100]
-            if kept:
-                labels, values = [k[0] for k in kept], [k[1] for k in kept]
-        chart_type = "bar" if len(values) <= 6 else "line"
-        return {
-            "type": "chartjs",
-            "config": {
-                "type": chart_type,
-                "data": {
-                    "labels": labels,
-                    "datasets": [
-                        {
-                            "label": columns[value_i] if value_i < len(columns) else "value",
-                            "data": values,
-                            "borderColor": "#0b3d91",
-                            "backgroundColor": "rgba(11,61,145,0.35)",
-                            "tension": 0.25,
-                        }
-                    ],
-                },
-                "options": {
-                    "responsive": True,
-                    "plugins": {
-                        "title": {"display": True, "text": query[:80]},
-                        "legend": {"display": False},
-                    },
-                },
-            },
-        }
