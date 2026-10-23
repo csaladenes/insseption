@@ -7,7 +7,7 @@
   "lang_label": "Language",
   "title": "Explore Romanian statistics · insseption",
   "description": "Ask everyday questions about Romania’s official statistics — population, jobs, counties and more — with clear charts and maps.",
-  "hero_kicker": "National Institute of Statistics · Romania",
+  "hero_kicker": "Data from the National Institute of Statistics",
   "hero_title": "Find the figures<br /><em>you need.</em>",
   "hero_lead": "Ask in everyday language about population, jobs, counties and more. We look up the official numbers and show them as a clear chart or map.",
   "chat_title": "Explore statistics",
@@ -21,7 +21,7 @@
   "error_network": "Could not reach the statistics service",
   "download_csv": "Download table (CSV)",
   "download_png": "Download chart (PNG)",
-  "note": "Source: National Institute of Statistics (INS) — TEMPO-Online. This is an unofficial service and is not endorsed by INS.",
+  "note": "Source: data from the National Institute of Statistics (INS) — TEMPO-Online. Unofficial service; not endorsed by INS.",
   "note_docs": "About the data",
   "note_ref": "For developers",
   "ex1": "How many people live in Romania?",
@@ -29,5 +29,6 @@
   "ex3": "What is the latest population figure for Bucharest?",
   "docs_path": "/docs/en",
   "ref_path": "/docs/en/reference",
-  "context_reset": "Conversation context was cleared after 30 minutes of inactivity."
+  "context_reset": "Conversation context was cleared after 30 minutes of inactivity.",
+  "map_legend": "Legend (quintiles)"
 }

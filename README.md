@@ -106,6 +106,15 @@ curl -sS https://insse.csaladen.es/api/v1/health
 
 Guide: https://insse.csaladen.es/docs
 
+
+## Ask TEMPO UI notes
+
+- Header attribution: **“Date de la / Data from …”** the National Institute of Statistics (never brand as official INS without that prefix).
+- Home example pills: random sample from `web/examples.json` (large RO/EN/HU pools); click submits the question.
+- County maps: Mapbox GL choropleth with **5 quintiles**, green → yellow → red (`#239f69` → `#f5d232` → `#850237`), caption + legend **above** the map.
+- Agent follow-ups (“Ce propun” / “You could also ask” / “Ajánlom”) render as **clickable buttons** that submit the chat.
+- Session context ~30 minutes; dual OpenRouter tiers (preflight / execute). Docs are trilingual at `/docs/{en|ro|hu}` and `/docs/{lang}/reference`.
+
 ## Chat agent (separate container)
 
 NL agent in `./agent` (OpenRouter → TEMPO via the JSON API). The agent

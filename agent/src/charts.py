@@ -241,8 +241,10 @@ def choropleth_payload(query: str, labels: list[str], values: list[float]) -> di
         "object": "ROU_adm1",
         "name_property": "NAME_1",
         "values": mapping,
-        "color_low": "#0b1019",
-        "color_high": "#7096C2",
+        # mapbox8-style green → yellow → red (low → high), 5 quintiles
+        "colors": ["#239f69", "#8fbf4a", "#f5d232", "#c52b69", "#850237"],
+        "color_low": "#239f69",
+        "color_high": "#850237",
     }
 
 

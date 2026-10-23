@@ -7,7 +7,7 @@
   "lang_label": "Limbă",
   "title": "Explorează statisticile României · insseption",
   "description": "Pune întrebări obișnuite despre statisticile oficiale ale României — populație, locuri de muncă, județe și altele — cu grafice și hărți clare.",
-  "hero_kicker": "Institutul Național de Statistică · România",
+  "hero_kicker": "Date de la Institutul Național de Statistică",
   "hero_title": "Găsește cifrele<br /><em>de care ai nevoie.</em>",
   "hero_lead": "Întreabă în limbaj obișnuit despre populație, locuri de muncă, județe și altele. Căutăm cifrele oficiale și le arătăm într-un grafic sau pe o hartă clară.",
   "chat_title": "Explorează statisticile",
@@ -21,7 +21,7 @@
   "error_network": "Nu am putut contacta serviciul de statistici",
   "download_csv": "Descarcă tabelul (CSV)",
   "download_png": "Descarcă graficul (PNG)",
-  "note": "Sursa: Institutul Național de Statistică (INS) — TEMPO-Online. Serviciu neoficial, fără endorsare din partea INS.",
+  "note": "Sursa: date de la Institutul Național de Statistică (INS) — TEMPO-Online. Serviciu neoficial, fără endorsare din partea INS.",
   "note_docs": "Despre date",
   "note_ref": "Pentru dezvoltatori",
   "ex1": "Câți locuitori are România?",
@@ -29,5 +29,6 @@
   "ex3": "Care este cea mai recentă populație a Bucureștiului?",
   "docs_path": "/docs/ro",
   "ref_path": "/docs/ro/reference",
-  "context_reset": "Contextul conversației a fost resetat după 30 de minute de inactivitate."
+  "context_reset": "Contextul conversației a fost resetat după 30 de minute de inactivitate.",
+  "map_legend": "Legendă (quintile)"
 }

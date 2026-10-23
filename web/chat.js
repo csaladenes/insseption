@@ -102,30 +102,64 @@ function tableToCsv(table) {
   );
 }
 
-function lerpColor(a, b, t) {
-  const p = (hex) => [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
-  ];
-  const A = p(a),
-    B = p(b);
-  const c = A.map((x, i) => Math.round(x + (B[i] - x) * t));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
+function formatNum(n, lang = "en") {
+  try {
+    return Number(n).toLocaleString(lang === "ro" ? "ro-RO" : lang === "hu" ? "hu-HU" : "en-US");
+  } catch (_) {
+    return String(n);
+  }
 }
 
-function normName(s) {
-  return String(s || "")
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .replace(/municipiul\s+/g, "")
-    .replace(/bucuresti|bucharest/g, "bucharest")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+/** mapbox8 palette: green → yellow → magenta/red (low → high), 5 quintiles */
+const MAP_QUINTILE_COLORS = [
+  "#239f69",
+  "#8fbf4a",
+  "#f5d232",
+  "#c52b69",
+  "#850237",
+];
+
+function assignQuintiles(features) {
+  const items = [];
+  for (const f of features || []) {
+    const v = f.properties?.value;
+    if (typeof v === "number" && Number.isFinite(v)) items.push({ f, v });
+    else if (f.properties) f.properties.qbin = null;
+  }
+  items.sort((a, b) => a.v - b.v);
+  const n = items.length;
+  for (let i = 0; i < n; i++) {
+    const bin = Math.min(4, Math.floor((i * 5) / n));
+    items[i].f.properties.qbin = bin;
+  }
 }
 
-async function renderChoropleth(host, chart) {
+function buildMapLegend(ranges, lang, title) {
+  const wrap = el("div", { className: "insse-map-legend" });
+  if (title) {
+    wrap.appendChild(el("div", { className: "insse-map-legend-title", text: title }));
+  }
+  const row = el("div", { className: "insse-map-legend-row" });
+  for (const r of ranges) {
+    const item = el("div", { className: "insse-map-legend-item" });
+    item.appendChild(
+      el("span", {
+        className: "insse-map-legend-swatch",
+        style: `background:${r.color}`,
+      })
+    );
+    const label =
+      r.lo === r.hi
+        ? formatNum(r.lo, lang)
+        : `${formatNum(r.lo, lang)} – ${formatNum(r.hi, lang)}`;
+    item.appendChild(el("span", { className: "insse-map-legend-label", text: label }));
+    row.appendChild(item);
+  }
+  wrap.appendChild(row);
+  return wrap;
+}
+
+async function renderChoropleth(host, chart, opts = {}) {
   // Mapbox GL — same stack as ROEM html/panels/mapbox8.html
   const token =
     window.MAPBOX_ACCESS_TOKEN || window.INSSEPTION_MAPBOX_TOKEN || "";
@@ -138,7 +172,17 @@ async function renderChoropleth(host, chart) {
     return null;
   }
 
+  host.innerHTML = "";
+  const lang = opts.lang || "en";
+  const titleText = chart.title || opts.mapTitle || "";
+  if (titleText) {
+    host.appendChild(el("div", { className: "insse-map-caption", text: titleText }));
+  }
+
   const mapDiv = el("div", { className: "insse-chat-map" });
+  // legend inserted above map after ranges known — placeholder first
+  const legendHost = el("div", { className: "insse-map-legend-host" });
+  host.appendChild(legendHost);
   host.appendChild(mapDiv);
 
   window.mapboxgl.accessToken = token;
@@ -166,12 +210,11 @@ async function renderChoropleth(host, chart) {
   const values = chart.values || {};
   const lookup = {};
   for (const [k, v] of Object.entries(values)) lookup[normName(k)] = v;
-  const nums = Object.values(values).filter((v) => typeof v === "number");
-  const lo = nums.length ? Math.min(...nums) : 0;
-  const hi = nums.length ? Math.max(...nums) : 1;
   const prop = chart.name_property || "NAME_1";
-  const low = chart.color_low || "#0b1019";
-  const high = chart.color_high || "#7096C2";
+  const colors =
+    Array.isArray(chart.colors) && chart.colors.length >= 5
+      ? chart.colors.slice(0, 5)
+      : MAP_QUINTILE_COLORS;
 
   for (const feat of geo.features || []) {
     const name = feat.properties?.[prop] || "";
@@ -180,6 +223,28 @@ async function renderChoropleth(host, chart) {
     feat.properties.value = typeof val === "number" ? val : null;
     feat.properties.label = name;
   }
+  assignQuintiles(geo.features || []);
+  const byBin = {};
+  for (const feat of geo.features || []) {
+    const b = feat.properties.qbin;
+    if (b == null) continue;
+    const v = feat.properties.value;
+    if (!byBin[b]) byBin[b] = { color: colors[b] || MAP_QUINTILE_COLORS[b], lo: v, hi: v, count: 0 };
+    byBin[b].lo = Math.min(byBin[b].lo, v);
+    byBin[b].hi = Math.max(byBin[b].hi, v);
+    byBin[b].count += 1;
+  }
+  const legendRanges = Object.keys(byBin)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map((b) => byBin[b]);
+  legendHost.appendChild(
+    buildMapLegend(
+      legendRanges,
+      lang,
+      opts.legendTitle || "Legend (quintiles)"
+    )
+  );
 
   const popup = new window.mapboxgl.Popup({
     closeButton: false,
@@ -198,6 +263,11 @@ async function renderChoropleth(host, chart) {
     map.removeSource("counties");
   }
   map.addSource("counties", { type: "geojson", data: geo });
+
+  const matchExpr = ["match", ["get", "qbin"]];
+  for (let i = 0; i < 5; i++) matchExpr.push(i, colors[i] || MAP_QUINTILE_COLORS[i]);
+  matchExpr.push("#1C2331");
+
   map.addLayer({
     id: "counties-fill",
     type: "fill",
@@ -205,19 +275,11 @@ async function renderChoropleth(host, chart) {
     paint: {
       "fill-color": [
         "case",
-        ["==", ["typeof", ["get", "value"]], "number"],
-        [
-          "interpolate",
-          ["linear"],
-          ["get", "value"],
-          lo,
-          low,
-          hi === lo ? lo + 1 : hi,
-          high,
-        ],
+        ["==", ["typeof", ["get", "qbin"]], "number"],
+        matchExpr,
         "#1C2331",
       ],
-      "fill-opacity": 0.88,
+      "fill-opacity": 0.9,
     },
   });
   map.addLayer({
@@ -225,7 +287,7 @@ async function renderChoropleth(host, chart) {
     type: "line",
     source: "counties",
     paint: {
-      "line-color": "#35577D",
+      "line-color": "#1a2433",
       "line-width": 1,
     },
   });
@@ -239,7 +301,7 @@ async function renderChoropleth(host, chart) {
     const text =
       val == null || val === "null"
         ? `${name}: —`
-        : `${name}: ${Number(val).toLocaleString("en-US")}`;
+        : `${name}: ${formatNum(val, lang)}`;
     popup.setLngLat(e.lngLat).setHTML(text).addTo(map);
   });
   map.on("mouseleave", "counties-fill", () => {
@@ -266,7 +328,7 @@ async function renderChoropleth(host, chart) {
   }
 
   setTimeout(() => map.resize(), 120);
-  return { map, mapDiv };
+  return { map, mapDiv, host };
 }
 
 
@@ -321,7 +383,77 @@ function renderLangSwitch(host, lang, onChange) {
   });
 }
 
-export async function mountChat() {
+export 
+let EXAMPLE_POOL = null;
+async function loadExamplePool() {
+  if (EXAMPLE_POOL) return EXAMPLE_POOL;
+  try {
+    const res = await fetch("/examples.json", { cache: "no-cache" });
+    EXAMPLE_POOL = await res.json();
+  } catch (_) {
+    EXAMPLE_POOL = {};
+  }
+  return EXAMPLE_POOL;
+}
+
+function pickRandomExamples(pool, lang, n = 3) {
+  const list = (pool && pool[lang]) || (pool && pool.en) || [];
+  if (!list.length) return [];
+  const copy = list.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, Math.min(n, copy.length));
+}
+
+function wireSuggestionButtons(root, onSubmit) {
+  if (!root || typeof onSubmit !== "function") return;
+  const SUGGEST_RE =
+    /(propun|suggest|recommend|ajánl|próbáld|try also|you could also|poți întreba|mai poți|related|încearcă|kerdezhet|kérdezhet)/i;
+
+  const activate = (btn, text) => {
+    btn.type = "button";
+    btn.classList.add("insse-chat-suggest");
+    btn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      onSubmit(text);
+    });
+  };
+
+  root.querySelectorAll("button.insse-chat-suggest, button[data-suggest]").forEach((btn) => {
+    const text = (btn.getAttribute("data-suggest") || btn.textContent || "").trim();
+    if (text) activate(btn, text);
+  });
+
+  root.querySelectorAll("h3, h4, p, strong").forEach((h) => {
+    if (!SUGGEST_RE.test(h.textContent || "")) return;
+    let list = h.nextElementSibling;
+    while (list && list.tagName !== "UL" && list.tagName !== "OL") {
+      list = list.nextElementSibling;
+    }
+    if (!list) return;
+    list.classList.add("insse-suggest-list");
+    list.querySelectorAll(":scope > li").forEach((li) => {
+      if (li.querySelector("button")) {
+        const b = li.querySelector("button");
+        activate(b, (b.textContent || "").trim());
+        return;
+      }
+      const text = (li.textContent || "").trim();
+      if (!text) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "insse-chat-suggest";
+      btn.textContent = text;
+      li.textContent = "";
+      li.appendChild(btn);
+      activate(btn, text);
+    });
+  });
+}
+
+async function mountChat() {
   const mount =
     document.getElementById("insse-chat-mount") || document.body;
   if (document.getElementById("insse-chat-root")) return;
@@ -358,25 +490,35 @@ export async function mountChat() {
   root.append(panel);
   mount.appendChild(root);
 
+  const submitQuery = (text) => {
+    const q = (text || "").trim();
+    if (!q) return;
+    input.value = q;
+    form.requestSubmit();
+  };
+
   const fillExample = (text) => {
     input.value = text || "";
     input.focus();
   };
 
-  const examples = () => [dict.ex1, dict.ex2, dict.ex3].filter(Boolean);
-
-  const renderPills = () => {
+  const renderPills = async () => {
     const pills = document.getElementById("hero-pills");
     if (!pills) return;
     pills.innerHTML = "";
-    for (const ex of examples()) {
+    const pool = await loadExamplePool();
+    let picked = pickRandomExamples(pool, lang, 3);
+    if (!picked.length) {
+      picked = [dict.ex1, dict.ex2, dict.ex3].filter(Boolean);
+    }
+    for (const ex of picked) {
       pills.appendChild(
         el("button", {
           type: "button",
           className: "hero-pill",
           text: ex.length > 64 ? ex.slice(0, 61) + "…" : ex,
           title: ex,
-          onClick: () => fillExample(ex),
+          onClick: () => submitQuery(ex),
         })
       );
     }
@@ -425,13 +567,18 @@ export async function mountChat() {
     const bubble = el("div", { className: `insse-chat-msg ${role}` });
     const body = el("div", { className: "insse-chat-html" });
     body.innerHTML = sanitizeHtml(html);
+    wireSuggestionButtons(body, submitQuery);
     bubble.appendChild(body);
 
     const viz = el("div", { className: "insse-chat-viz" });
     let exportNode = null;
     const chart = payload.chart;
     if (chart?.type === "choropleth" || chart?.kind === "map") {
-      exportNode = await renderChoropleth(viz, chart);
+      exportNode = await renderChoropleth(viz, chart, {
+        lang,
+        legendTitle: dict.map_legend || "Legend (quintiles)",
+        mapTitle: chart.title || "",
+      });
       bubble.appendChild(viz);
     } else if (chart?.config && window.Chart) {
       const wrap = el("div", { className: "insse-chat-chart-wrap" });
@@ -490,9 +637,11 @@ export async function mountChat() {
           text: dict.download_png || "Download chart (PNG)",
           onClick: async () => {
             const target =
+              exportNode?.host ||
               exportNode?.mapDiv ||
               exportNode?.canvas ||
-              viz.querySelector(".insse-chat-map, canvas");
+              viz.querySelector(".insse-chat-viz, .insse-chat-map, canvas") ||
+              viz;
             if (!target) return;
             if (exportNode?.canvas?.toDataURL) {
               const a = el("a", {

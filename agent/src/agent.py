@@ -672,7 +672,13 @@ class TempoAgent:
             "- Summarise cleaned numbers in plain language.\n"
             "- Prefer everyday wording; you may mention the official table code once.\n"
             "- Do not say 'matrix'. Never mention steps/preflight/pipeline.\n"
-            "- Do not invent numbers; use only sample_rows / presentation_table."
+            "- Do not invent numbers; use only sample_rows / presentation_table.\n"
+            "- End with 2–4 related follow-up questions the user might ask next.\n"
+            "- Put each follow-up as: "
+            "<button type=\"button\" class=\"insse-chat-suggest\">…</button> "
+            "inside a short list under a heading like "
+            "'Ce propun' / 'You could also ask' / 'Ajánlom' (match answer language).\n"
+            "- Suggestion button text must be a complete, ready-to-send question."
         )
         raw = await self._chat(
             system, json.dumps(payload, ensure_ascii=False), model=self.model_execute

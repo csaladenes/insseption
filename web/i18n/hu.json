@@ -7,7 +7,7 @@
   "lang_label": "Nyelv",
   "title": "Romániai statisztikák felfedezése · insseption",
   "description": "Tegyél fel hétköznapi kérdéseket Románia hivatalos statisztikáiról — népesség, foglalkoztatás, megyék és mások — átlátható ábrákkal és térképekkel.",
-  "hero_kicker": "Országos Statisztikai Intézet · Románia",
+  "hero_kicker": "Adatok forrása: az Országos Statisztikai Intézet",
   "hero_title": "Találd meg a számokat,<br /><em>amelyek kellenek.</em>",
   "hero_lead": "Kérdezz hétköznapi nyelven népességről, munkahelyekről, megyékről. Megkeressük a hivatalos számokat, és világos ábra vagy térkép formájában mutatjuk.",
   "chat_title": "Statisztikák felfedezése",
@@ -21,7 +21,7 @@
   "error_network": "Nem sikerült elérni a statisztikai szolgáltatást",
   "download_csv": "Táblázat letöltése (CSV)",
   "download_png": "Ábra letöltése (PNG)",
-  "note": "Forrás: Országos Statisztikai Intézet (INS) — TEMPO-Online. Nem hivatalos szolgáltatás; az INS nem hagyta jóvá.",
+  "note": "Forrás: adatok az Országos Statisztikai Intézettől (INS) — TEMPO-Online. Nem hivatalos szolgáltatás; az INS nem hagyta jóvá.",
   "note_docs": "Az adatokról",
   "note_ref": "Fejlesztőknek",
   "ex1": "Hányan élnek Romániában?",
@@ -29,5 +29,6 @@
   "ex3": "Mi Bukarest legfrissebb népessége?",
   "docs_path": "/docs/hu",
   "ref_path": "/docs/hu/reference",
-  "context_reset": "A beszélgetés kontextusa 30 perc inaktivitás után törlődött."
+  "context_reset": "A beszélgetés kontextusa 30 perc inaktivitás után törlődött.",
+  "map_legend": "Jelmagyarázat (kvintilisek)"
 }
