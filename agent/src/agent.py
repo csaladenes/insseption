@@ -20,6 +20,7 @@ try:
         expand_county_selections,
         looks_like_county_query,
         parse_year_range,
+        prefer_matrix_for_years,
     )
     from models_tier import MODEL_EXECUTE, MODEL_PREFLIGHT
     from session import history_text, load_session, save_turn
@@ -30,6 +31,7 @@ except ImportError:
         expand_county_selections,
         looks_like_county_query,
         parse_year_range,
+        prefer_matrix_for_years,
     )
     from src.models_tier import MODEL_EXECUTE, MODEL_PREFLIGHT
     from src.session import history_text, load_session, save_turn
@@ -124,6 +126,20 @@ class TempoAgent:
             effective_query, plan, ui_lang=ui_lang, history=hist
         )
         matrix = (plan.get("matrix") or "").strip().upper()
+        # Older population windows need a matrix that actually covers those years
+        alt = prefer_matrix_for_years("\n".join([hist, user_query, effective_query]), matrix)
+        if alt and alt != matrix:
+            matrix = alt
+            plan["matrix"] = matrix
+            plan["chart_hint"] = plan.get("chart_hint") or "line"
+            plan.setdefault("preflight", {})
+            if isinstance(plan["preflight"], dict):
+                plan["preflight"] = {
+                    **plan["preflight"],
+                    "revised": True,
+                    "reason": (plan["preflight"].get("reason") or "")
+                    + f" Switched to {matrix} to cover the requested years.",
+                }
         data_lang = plan.get("lang") if plan.get("lang") in ("ro", "en") else "en"
         selections = (
             plan.get("selections") if isinstance(plan.get("selections"), dict) else {}

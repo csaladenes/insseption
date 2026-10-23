@@ -48,24 +48,71 @@ def parse_number(raw: Any) -> float | None:
 
 
 def extract_series(data: dict[str, Any]) -> tuple[list[str], list[float], list[list[Any]]]:
-    """Return labels, values, and clean table rows [label, value]."""
+    """Return labels, values, and clean table rows [label, value].
+
+    Supports tall rows and wide TEMPO responses where years are columns.
+    """
     columns = data.get("columns") or []
     rows = data.get("rows") or []
-    if len(columns) < 2 or not rows:
+    if not rows:
+        return [], [], []
+
+    # --- Wide format: header row contains Year YYYY across columns ---
+    header = None
+    data_row = None
+    for row in rows:
+        if not isinstance(row, (list, tuple)):
+            continue
+        year_cells = [
+            i
+            for i, c in enumerate(row)
+            if re.search(r"\b(?:year|anul)\s+(19\d{2}|20\d{2})\b", str(c), re.I)
+            or re.fullmatch(r"(19\d{2}|20\d{2})", str(c).strip())
+        ]
+        if len(year_cells) >= 2:
+            header = row
+            break
+    if header is not None:
+        # last non-header numeric-ish row with same width
+        for row in reversed(rows):
+            if not isinstance(row, (list, tuple)) or len(row) != len(header):
+                continue
+            nums = [parse_number(c) for c in row]
+            if sum(v is not None and v > 1000 for v in nums) >= 2:
+                data_row = row
+                break
+        if data_row is not None:
+            labels: list[str] = []
+            values: list[float] = []
+            table: list[list[Any]] = []
+            for i, cell in enumerate(header):
+                m = re.search(r"(19\d{2}|20\d{2})", str(cell))
+                if not m:
+                    continue
+                val = parse_number(data_row[i])
+                if val is None:
+                    continue
+                labels.append(m.group(1))
+                values.append(val)
+                table.append([m.group(1), val])
+            if values:
+                return labels, values, table
+
+    if len(columns) < 2:
         return [], [], []
 
     # Prefer territory-like column for labels when present
     label_i = 0
     for i, c in enumerate(columns):
         cl = str(c).lower()
-        if any(k in cl for k in ("county", "jude", "macroregion", "territor", "regiun")):
+        if any(k in cl for k in ("county", "jude", "macroregion", "territor", "regiun", "year", "ani")):
             label_i = i
             break
     value_i = len(columns) - 1
 
-    labels: list[str] = []
-    values: list[float] = []
-    table: list[list[Any]] = []
+    labels = []
+    values = []
+    table = []
     colset = {str(c).lower() for c in columns}
 
     for row in rows:
@@ -74,15 +121,13 @@ def extract_series(data: dict[str, Any]) -> tuple[list[str], list[float], list[l
         label = re.sub(r"<[^>]+>", "", str(row[label_i])).strip()
         if not label or label.lower() in colset:
             continue
-        if label.lower().startswith(("mu:", "um:", "year ", "anul ", "nace")):
+        if label.lower().startswith(("mu:", "um:", "nace")):
             continue
-        # skip unit / header echoes
-        if label.lower() in {"number of persons", "total"} and value_i == label_i:
+        if label.lower() in {"number of persons"}:
             continue
         val = parse_number(row[value_i])
         if val is None:
             continue
-        # skip year-like magnitudes when mixed
         labels.append(label)
         values.append(val)
         table.append([label, val])
@@ -110,10 +155,27 @@ def looks_like_county_query(query: str, labels: list[str]) -> bool:
 
 
 def choose_kind(query: str, labels: list[str], values: list[float]) -> str:
+    yearish = bool(labels) and all(
+        str(x).isdigit() and 1900 <= int(str(x)) <= 2100
+        for x in labels[: min(5, len(labels))]
+    )
+    if parse_year_range(query) or yearish:
+        return "line"
     if looks_like_county_query(query, labels):
         return "map"
     q = strip_diacritics(query).lower()
-    if any(k in q for k in ("trend", "over time", "time series", "evolutie", "evolution", "ani", "years")):
+    if any(
+        k in q
+        for k in (
+            "trend",
+            "over time",
+            "time series",
+            "evolutie",
+            "evolution",
+            "ani",
+            "years",
+        )
+    ):
         return "line"
     if len(values) <= 12:
         return "bar"
@@ -237,37 +299,82 @@ def apply_year_range_selections(
     selections: dict[str, Any] | None,
     text: str,
 ) -> dict[str, list[int]]:
-    """If the user asks for a year span, select those years on the period dimension."""
+    """Select year span + sensible TOTAL defaults on other dimensions."""
     out: dict[str, list[int]] = {}
     if selections:
         for k, v in selections.items():
             if isinstance(v, list):
                 out[str(k)] = [int(x) for x in v]
     yr = parse_year_range(text)
+    dims = meta.get("dimensions") or []
     if not yr:
         return out
     lo, hi = yr
-    dims = meta.get("dimensions") or []
+
+    def _total_id(opts: list[dict[str, Any]]) -> int | None:
+        for o in opts:
+            lab = (o.get("label") or "").strip().lower()
+            if lab in {"total", "total ", "totale"} or lab.upper() == "TOTAL":
+                if o.get("nom_item_id") is not None:
+                    return int(o["nom_item_id"])
+        for o in opts:
+            if "total" in (o.get("label") or "").strip().lower() and o.get("nom_item_id") is not None:
+                return int(o["nom_item_id"])
+        if opts and opts[0].get("nom_item_id") is not None:
+            return int(opts[0]["nom_item_id"])
+        return None
+
     for d in dims:
-        lab = (d.get("label") or "").lower()
-        if not any(k in lab for k in ("year", "ani", "perioad", "an ")):
-            continue
         code = str(d.get("dim_code") or d.get("id") or "")
         if not code:
             continue
-        ids: list[int] = []
-        for o in d.get("options") or []:
-            label = str(o.get("label") or "")
-            ys = _YEAR_LIST_RE.findall(label)
-            if not ys:
-                continue
-            y = int(ys[0])
-            if lo <= y <= hi and o.get("nom_item_id") is not None:
-                ids.append(int(o["nom_item_id"]))
-        if ids:
-            out[code] = ids
-        break
+        lab = (d.get("label") or "").lower()
+        opts = d.get("options") or []
+        if not opts:
+            continue
+        if any(k in lab for k in ("year", "ani", "perioad")) and "age" not in lab:
+            ids: list[int] = []
+            for o in opts:
+                ys = _YEAR_LIST_RE.findall(str(o.get("label") or ""))
+                if not ys:
+                    continue
+                y = int(ys[0])
+                if lo <= y <= hi and o.get("nom_item_id") is not None:
+                    ids.append(int(o["nom_item_id"]))
+            if ids:
+                out[code] = ids
+            else:
+                # no overlap — keep closest available years inside matrix span
+                all_y = []
+                for o in opts:
+                    ys = _YEAR_LIST_RE.findall(str(o.get("label") or ""))
+                    if ys and o.get("nom_item_id") is not None:
+                        all_y.append((int(ys[0]), int(o["nom_item_id"])))
+                if all_y:
+                    # prefer years nearest to requested window
+                    mid = (lo + hi) / 2
+                    all_y.sort(key=lambda x: abs(x[0] - mid))
+                    pick = sorted(all_y[: min(12, len(all_y))], key=lambda x: x[0])
+                    out[code] = [i for _, i in pick]
+        elif code not in out:
+            tid = _total_id(opts)
+            if tid is not None:
+                out[code] = [tid]
     return out
+
+
+def prefer_matrix_for_years(text: str, current: str | None) -> str | None:
+    """Suggest a matrix that better covers an older year window."""
+    yr = parse_year_range(text)
+    if not yr:
+        return None
+    lo, hi = yr
+    # POP105A starts 2003; legally resident POP107A from 1992; POP111A to 1991
+    if hi < 1992:
+        return "POP111A"
+    if lo < 2003:
+        return "POP107A"
+    return current
 
 
 # --- TEMPO selection helpers -------------------------------------------------
