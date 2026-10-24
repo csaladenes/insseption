@@ -4,6 +4,8 @@ import asyncio
 import hashlib
 import json
 import codecs
+import logging
+import re
 
 
 def _cp1250_fallback(err: UnicodeDecodeError) -> tuple[str, int]:
@@ -202,6 +204,21 @@ def is_error_envelope(raw: Any) -> bool:
     return any(m in text for m in _ERROR_ENVELOPE_MARKERS)
 
 
+def looks_like_unknown_envelope(raw: Any) -> bool:
+    """A short all-text response with no recognised marker: likely a reworded TEMPO error.
+
+    Real results carry three header rows before any data, so one or two rows of prose
+    is never a dataset.
+    """
+    if not isinstance(raw, list) or not raw or len(raw) > 2 or is_error_envelope(raw):
+        return False
+    cells = [c for row in raw if isinstance(row, list) for c in row] or raw
+    return not any(re.search(r"\d", str(c)) for c in cells) and any(len(str(c)) > 40 for c in cells)
+
+
+log = logging.getLogger("insseption.upstream")
+
+
 async def fetch_dataset(code: str, body: dict[str, Any]) -> Any:
     code = code.upper()
     canon = json.dumps(body, sort_keys=True, ensure_ascii=False)
@@ -220,6 +237,9 @@ async def fetch_dataset(code: str, body: dict[str, Any]) -> Any:
                 "TEMPO-Online did not return results for this query (upstream error); try again later.",
                 status=502,
             )
+        if looks_like_unknown_envelope(data):
+            log.warning("TEMPO %s returned an unrecognised short text response (not cached): %.200s", code, data)
+            return data
         _cache_query[key] = data
         return data
 

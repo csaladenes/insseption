@@ -115,6 +115,13 @@ The two services deploy differently:
 
 An rsynced API fix without a rebuild runs the old code with no error.
 
+Offline tests (canned TEMPO payloads, no network):
+
+```bash
+uv run --no-project --with pytest python -m pytest agent/tests -q
+uv run --no-project --with pytest --with cachetools --with httpx python -m pytest api/tests -q
+```
+
 Agent eval (35 graded cases, LLM judge) runs inside the agent container:
 
 ```bash
