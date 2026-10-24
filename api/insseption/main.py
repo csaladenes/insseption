@@ -4,6 +4,7 @@ import csv
 import json
 import io
 import re
+import time
 from contextlib import asynccontextmanager
 
 import os
@@ -30,11 +31,13 @@ from .models import (
 from .news import parse_news_html
 from . import docs
 from .upstream import (
+    _request,
     close_client,
     fetch_context,
     fetch_dataset,
     fetch_matrix_meta,
     fetch_news_html,
+    is_error_envelope,
     ping_upstream,
 )
 
@@ -95,13 +98,35 @@ router = APIRouter()
 
 @router.get("/health", response_class=ApiJSONResponse)
 async def health():
-    upstream_ok = await ping_upstream()
+    meta_ok = await ping_upstream()
+    data_ok = await _probe_data() if meta_ok else False
     return {
         "ok": True,
         "version": config.VERSION,
-        "upstream_ok": upstream_ok,
+        "upstream_ok": meta_ok and data_ok,
+        "upstream_meta_ok": meta_ok,
+        "upstream_data_ok": data_ok,
         "attribution": config.ATTRIBUTION,
     }
+
+
+_DATA_PROBE: dict[str, float | bool] = {"at": 0.0, "ok": False}
+
+
+async def _probe_data() -> bool:
+    """One-cell TEMPO query, memoised for a minute; metadata can be up while data queries fail."""
+    now = time.monotonic()
+    if now - float(_DATA_PROBE["at"]) < 60:
+        return bool(_DATA_PROBE["ok"])
+    try:
+        meta = await fetch_matrix_meta("POP107A", lang="ro")
+        body = build_upstream_query(meta, {}, "ro", "POP107A", config.MAX_CELLS)
+        raw = await _request("POST", "/matrix/dataSet/POP107A", json_body=body)
+        ok = not is_error_envelope(raw)
+    except ApiError:
+        ok = False
+    _DATA_PROBE.update(at=now, ok=ok)
+    return ok
 
 
 @router.get("/meta", response_class=ApiJSONResponse)

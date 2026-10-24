@@ -214,8 +214,9 @@ def run_case(base: str, case: dict, use_judge: bool) -> dict:
 
     j = judge(case, case["turns"][-1], resp) if use_judge and checks["http_ok"] else {"score": None}
     passed = all(checks.values()) and (j.get("score") is None or j["score"] >= 1)
+    upstream = "upstream_unavailable" in str(resp.get("error") or "")
     return {
-        "id": case["id"], "lang": case["lang"], "passed": passed,
+        "id": case["id"], "lang": case["lang"], "passed": passed and not upstream, "upstream": upstream,
         "latency_s": round(last_dt, 1), "total_s": round(total, 1),
         "matrix": matrix or None, "chart": kind, "error": resp.get("error"),
         "table_rows": len((resp.get("table") or {}).get("rows") or []),
@@ -263,7 +264,7 @@ def main() -> int:
     wall = time.monotonic() - t0
 
     for r in results:
-        mark = "PASS" if r["passed"] else "FAIL"
+        mark = "UPST" if r.get("upstream") else ("PASS" if r["passed"] else "FAIL")
         js = r["judge"].get("score")
         print(f"{mark} {r['id']:<22} {r['latency_s']:>5.1f}s {str(r['matrix']):<9} {r['chart']:<5} rows={r.get('table_rows', 0):<3} judge={js} "
               + (f"failed={r['failed']} " if r["failed"] else "")
@@ -273,6 +274,7 @@ def main() -> int:
     summary = {
         "label": args.label, "base": args.base, "cases": len(results),
         "passed": sum(r["passed"] for r in results),
+        "upstream_unavailable": sum(bool(r.get("upstream")) for r in results),
         "latency_median_s": statistics.median(lat),
         "latency_p90_s": lat[int(0.9 * (len(lat) - 1))],
         "judge_mean": round(statistics.mean(scores), 2) if scores else None,
@@ -281,6 +283,9 @@ def main() -> int:
     print("\n" + json.dumps(summary))
     if args.out:
         Path(args.out).write_text(json.dumps({"summary": summary, "results": results}, ensure_ascii=False, indent=1))
+    if summary["upstream_unavailable"]:
+        print(f"TEMPO upstream unavailable in {summary['upstream_unavailable']} case(s): not graded; re-run when TEMPO is back.")
+        return 2
     return 0 if summary["passed"] == summary["cases"] else 1
 
 

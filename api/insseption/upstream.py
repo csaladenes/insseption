@@ -187,6 +187,21 @@ async def fetch_matrix_meta(code: str, lang: str = "ro") -> Any:
     return await _singleflight(key, load)
 
 
+_ERROR_ENVELOPE_MARKERS = (
+    "results to your query could not be returned",
+    "rezultatul solicitat nu poate fi returnat",
+)
+
+
+def is_error_envelope(raw: Any) -> bool:
+    """TEMPO reports failed queries as HTTP 200 with the message as the only cell."""
+    if not isinstance(raw, list) or not raw or len(raw) > 2:
+        return False
+    cells = [c for row in raw if isinstance(row, list) for c in row] or raw
+    text = " ".join(str(c) for c in cells).lower()
+    return any(m in text for m in _ERROR_ENVELOPE_MARKERS)
+
+
 async def fetch_dataset(code: str, body: dict[str, Any]) -> Any:
     code = code.upper()
     canon = json.dumps(body, sort_keys=True, ensure_ascii=False)
@@ -199,6 +214,12 @@ async def fetch_dataset(code: str, body: dict[str, Any]) -> Any:
         data = await _request(
             "POST", f"/matrix/dataSet/{code}", json_body=body
         )
+        if is_error_envelope(data):
+            raise ApiError(
+                "upstream_unavailable",
+                "TEMPO-Online did not return results for this query (upstream error); try again later.",
+                status=502,
+            )
         _cache_query[key] = data
         return data
 

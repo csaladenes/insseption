@@ -473,6 +473,16 @@ class TempoAgent:
             json={"lang": lang, "selections": selections or {}},
         )
         if q_resp.status_code >= 400:
+            try:
+                code = (q_resp.json().get("error") or {}).get("code")
+            except (ValueError, AttributeError):
+                code = None
+            if code == "upstream_unavailable":
+                return None, (
+                    "upstream_unavailable: TEMPO-Online (INSSE) is not returning data right now. "
+                    "Tell the user the statistics service is temporarily unavailable and to try again later; "
+                    "do not suggest the data does not exist."
+                )
             return None, f"query HTTP {q_resp.status_code}: {q_resp.text[:200]}"
         return q_resp.json(), None
 
