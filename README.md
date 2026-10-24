@@ -104,6 +104,24 @@ docker-compose up -d --build --no-deps insseption
 curl -sS https://insse.csaladen.es/api/v1/health
 ```
 
+The two services deploy differently:
+
+| Change in | How it reaches the container | After rsync |
+|-----------|------------------------------|-------------|
+| `api/insseption/**` | baked into the `insseption` image | `docker-compose build insseption && docker-compose up -d insseption` |
+| `web/**` | bind-mounted read-only | nothing (static files) |
+| `agent/src/**`, `agent/config/**` | bind-mounted | `docker-compose restart insseption-agent` |
+| `agent/eval`, `scripts/eval_agent.py` | not mounted | copy into the agent container (`docker exec -i … sh -c 'cat > /app/…'`) |
+
+An rsynced API fix without a rebuild runs the old code with no error.
+
+Agent eval (35 graded cases, LLM judge) runs inside the agent container:
+
+```bash
+docker exec insseption-agent python scripts/eval_agent.py \
+  --base http://localhost:8000 --concurrency 3 --out /tmp/eval.json
+```
+
 Guide: https://insse.csaladen.es/docs
 
 

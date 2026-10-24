@@ -24,6 +24,9 @@ try:
         mentioned_years,
         parse_year_range,
         prefer_matrix_for_years,
+        relative_year_range,
+        apply_single_year,
+        select_named_counties,
     )
     from models_tier import MODEL_EXECUTE, MODEL_PREFLIGHT
     from session import history_text, load_session, save_turn
@@ -36,6 +39,9 @@ except ImportError:
         mentioned_years,
         parse_year_range,
         prefer_matrix_for_years,
+        relative_year_range,
+        apply_single_year,
+        select_named_counties,
     )
     from src.models_tier import MODEL_EXECUTE, MODEL_PREFLIGHT
     from src.session import history_text, load_session, save_turn
@@ -91,6 +97,11 @@ Step 3 — ANALYZE: After real data returns, clean/reformat, then interpret
 Step 4 — PRESENT: Table + chart via predefined skills. Skip charts for a single number.
   User-facing HTML: concise answer only — no step lists, no "preflight" talk.
 """.strip()
+
+
+def _user_turns(hist: str) -> str:
+    """History lines the user wrote; assistant answers quote other years (e.g. the latest)."""
+    return "\n".join(line for line in (hist or "").splitlines() if line.startswith("user:"))
 
 
 def _kw_hit(keyword: str, text: str) -> bool:
@@ -204,7 +215,7 @@ class TempoAgent:
             break
         # Older population windows need a matrix that actually covers those years
         alt = prefer_matrix_for_years(
-            "\n".join([hist, user_query, effective_query]), matrix, years=asked_years
+            "\n".join([_user_turns(hist), user_query, effective_query]), matrix, years=asked_years
         )
         if alt and alt != matrix:
             matrix = alt
@@ -244,7 +255,7 @@ class TempoAgent:
         table = None
         cleaned: dict[str, Any] | None = None
 
-        combined_text = f"{hist}\n{user_query}\n{effective_query}"
+        combined_text = f"{_user_turns(hist)}\n{user_query}\n{effective_query}"
 
         if matrix and CODE_RE.match(matrix):
             try:
@@ -258,20 +269,37 @@ class TempoAgent:
                     want_county = looks_like_county_query(effective_query, []) or (
                         looks_like_county_query(user_query, []) and not parse_year_range(user_query)
                     )
-                    year_range = parse_year_range(combined_text)
+                    current_text = f"{user_query}\n{effective_query}"
+                    year_range = parse_year_range(current_text)
+                    if not year_range and not mentioned_years(current_text):
+                        year_range = parse_year_range(combined_text)
+                    named = None
 
                     if meta:
+                        if not year_range:
+                            year_range = relative_year_range(current_text, meta)
                         # Year spans from follow-ups like "1990-2000"
                         if year_range:
                             selections = apply_year_range_selections(
-                                meta, selections, combined_text
+                                meta, selections, combined_text, yr=year_range
                             )
                             plan["selections"] = selections
                             db_query["selections"] = selections
                             # Prefer line charts for evolution
                             plan["chart_hint"] = "line"
+                        else:
+                            one = mentioned_years(current_text)
+                            if one and one[0] == one[1]:
+                                selections = apply_single_year(meta, selections, one[0])
+                                plan["selections"] = selections
+                                db_query["selections"] = selections
 
-                        if want_county and not year_range:
+                        named = select_named_counties(meta, selections, effective_query)
+                        if named:
+                            selections = named
+                            plan["selections"] = selections
+                            db_query["selections"] = selections
+                        elif want_county:
                             selections = expand_county_selections(meta, selections)
                             plan["selections"] = selections
                             db_query["selections"] = selections
@@ -305,12 +333,12 @@ class TempoAgent:
 
                     if (
                         want_county
-                        and not year_range
+                        and not named
                         and meta
                         and data
                         and len(data.get("rows") or []) < 10
                     ):
-                        selections = expand_county_selections(meta, {})
+                        selections = expand_county_selections(meta, selections)
                         plan["selections"] = selections
                         db_query["selections"] = selections
                         data2, err2 = await self._run_query(
@@ -328,7 +356,7 @@ class TempoAgent:
         if data and data.get("rows"):
             cleaned = self._clean_data(data)
 
-        force_kind = plan.get("chart_hint") if isinstance(plan.get("chart_hint"), str) else None
+        chart_hint = plan.get("chart_hint") if isinstance(plan.get("chart_hint"), str) else None
         if generate_chart and cleaned and cleaned.get("rows"):
             chart, table = build_chart(
                 effective_query,
@@ -337,7 +365,7 @@ class TempoAgent:
                     "rows": cleaned.get("raw_rows") or data.get("rows"),
                     "row_count": cleaned.get("row_count"),
                 },
-                force_kind=force_kind,
+                hint=chart_hint,
             )
             if table is None and cleaned.get("table_rows"):
                 table = {
@@ -793,8 +821,8 @@ class TempoAgent:
         api_error: str | None,
         history: str = "",
     ) -> str:
-        sample_rows = (data or {}).get("rows", [])[:30] if data else []
-        table_rows = (table or {}).get("rows", [])[:40] if table else []
+        sample_rows = (data or {}).get("rows", [])[:50] if data else []
+        table_rows = (table or {}).get("rows", [])[:60] if table else []
         payload = {
             "question": user_query,
             "history": history,
@@ -803,6 +831,7 @@ class TempoAgent:
             "columns": (data or {}).get("columns"),
             "row_count": (data or {}).get("row_count"),
             "sample_rows": sample_rows,
+            "presentation_columns": (table or {}).get("columns"),
             "presentation_table": table_rows,
             "api_error": api_error,
             "attribution": "Sursa: INS TEMPO-Online (via insseption).",

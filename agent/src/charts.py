@@ -47,6 +47,48 @@ def parse_number(raw: Any) -> float | None:
         return None
 
 
+def _has_letters(cell: Any) -> bool:
+    return bool(re.search(r"[^\W\d_]", re.sub(r"<[^>]+>", "", str(cell))))
+
+
+def wide_series(rows: list[Any]) -> tuple[list[str], list[tuple[str, list[float | None]]], str] | None:
+    """Wide TEMPO responses (years as columns): (year labels, [(row label, values per year)], label name)."""
+    header = None
+    year_idx: list[int] = []
+    for row in rows:
+        if not isinstance(row, (list, tuple)):
+            continue
+        idx = [
+            i
+            for i, c in enumerate(row)
+            if re.search(r"\b(?:year|anul)\s+(19\d{2}|20\d{2})\b", str(c), re.I)
+            or re.fullmatch(r"(19\d{2}|20\d{2})", str(c).strip())
+        ]
+        if len(idx) >= 2:
+            header, year_idx = row, idx
+            break
+    if header is None:
+        return None
+    years = [re.search(r"(19\d{2}|20\d{2})", str(header[i])).group(1) for i in year_idx]
+    label_i = year_idx[0] - 1
+    series: list[tuple[str, list[float | None]]] = []
+    for row in rows:
+        if row is header or not isinstance(row, (list, tuple)) or len(row) != len(header):
+            continue
+        cells = [row[i] for i in year_idx]
+        if all(_has_letters(c) for c in cells):
+            continue
+        vals = [None if _has_letters(c) else parse_number(c) for c in cells]
+        if sum(v is not None for v in vals) == 0:
+            continue
+        label = re.sub(r"<[^>]+>", "", str(row[label_i])).strip() if label_i >= 0 else ""
+        series.append((label, vals))
+    if not series:
+        return None
+    label_name = str(header[label_i]).strip() if label_i >= 0 else "label"
+    return years, series, label_name
+
+
 def extract_series(data: dict[str, Any]) -> tuple[list[str], list[float], list[list[Any]]]:
     """Return labels, values, and clean table rows [label, value].
 
@@ -58,45 +100,22 @@ def extract_series(data: dict[str, Any]) -> tuple[list[str], list[float], list[l
         return [], [], []
 
     # --- Wide format: header row contains Year YYYY across columns ---
-    header = None
-    data_row = None
-    for row in rows:
-        if not isinstance(row, (list, tuple)):
-            continue
-        year_cells = [
-            i
-            for i, c in enumerate(row)
-            if re.search(r"\b(?:year|anul)\s+(19\d{2}|20\d{2})\b", str(c), re.I)
-            or re.fullmatch(r"(19\d{2}|20\d{2})", str(c).strip())
-        ]
-        if len(year_cells) >= 2:
-            header = row
-            break
-    if header is not None:
-        # last non-header numeric-ish row with same width
-        for row in reversed(rows):
-            if not isinstance(row, (list, tuple)) or len(row) != len(header):
-                continue
-            nums = [parse_number(c) for c in row]
-            if sum(v is not None and v > 1000 for v in nums) >= 2:
-                data_row = row
-                break
-        if data_row is not None:
-            labels: list[str] = []
-            values: list[float] = []
-            table: list[list[Any]] = []
-            for i, cell in enumerate(header):
-                m = re.search(r"(19\d{2}|20\d{2})", str(cell))
-                if not m:
-                    continue
-                val = parse_number(data_row[i])
-                if val is None:
-                    continue
-                labels.append(m.group(1))
-                values.append(val)
-                table.append([m.group(1), val])
-            if values:
-                return labels, values, table
+    wide = wide_series(rows)
+    if wide:
+        years, series, _ = wide
+        if len(series) == 1:
+            label_vals = [(y, v) for y, v in zip(years, series[0][1]) if v is not None]
+            if label_vals:
+                return (
+                    [y for y, _ in label_vals],
+                    [v for _, v in label_vals],
+                    [[y, v] for y, v in label_vals],
+                )
+        else:
+            latest = [(lab, next((v for v in reversed(vals) if v is not None), None)) for lab, vals in series]
+            latest = [(lab, v) for lab, v in latest if v is not None]
+            if latest:
+                return [l for l, _ in latest], [v for _, v in latest], [[l, v] for l, v in latest]
 
     if len(columns) < 2:
         return [], [], []
@@ -125,6 +144,8 @@ def extract_series(data: dict[str, Any]) -> tuple[list[str], list[float], list[l
             continue
         if label.lower() in {"number of persons"}:
             continue
+        if _has_letters(row[value_i]):
+            continue
         val = parse_number(row[value_i])
         if val is None:
             continue
@@ -132,19 +153,12 @@ def extract_series(data: dict[str, Any]) -> tuple[list[str], list[float], list[l
         values.append(val)
         table.append([label, val])
 
-    if any(v >= 10_000 for v in values):
-        kept = [(l, v) for l, v in zip(labels, values) if v < 1900 or v > 2100]
-        if kept:
-            labels = [k[0] for k in kept]
-            values = [k[1] for k in kept]
-            table = [[l, v] for l, v in kept]
-
     return labels, values, table
 
 
 def looks_like_county_query(query: str, labels: list[str]) -> bool:
     q = strip_diacritics(query).lower()
-    if any(k in q for k in ("county", "counties", "judet", "judete", "județ", "map", "harta", "choropleth")):
+    if any(k in q for k in ("county", "counties", "judet", "judete", "județ", "megye", "map", "harta", "choropleth")):
         return True
     # many short place-like labels
     if len(labels) >= 20:
@@ -154,15 +168,36 @@ def looks_like_county_query(query: str, labels: list[str]) -> bool:
     return False
 
 
-def choose_kind(query: str, labels: list[str], values: list[float]) -> str:
+_EXPLICIT_KIND = (
+    ("bar", ("bar chart", "bar graph", "grafic cu bare", "diagrama cu bare", "oszlopdiagram")),
+    ("line", ("line chart", "line graph", "grafic liniar", "vonaldiagram")),
+    ("map", ("map", "harta", "terkep", "choropleth")),
+)
+
+
+def strong_kind(query: str, labels: list[str]) -> str | None:
+    """Chart kind implied by an explicit request or by the data's shape; None when undecided."""
+    q = strip_diacritics(query).lower()
+    for kind, words in _EXPLICIT_KIND:
+        if any(re.search(r"(?<![a-z])" + re.escape(w), q) for w in words):
+            return kind
     yearish = bool(labels) and all(
         str(x).isdigit() and 1900 <= int(str(x)) <= 2100
         for x in labels[: min(5, len(labels))]
     )
-    if parse_year_range(query) or yearish:
+    if yearish:
         return "line"
     if looks_like_county_query(query, labels):
         return "map"
+    if parse_year_range(query):
+        return "line" if len(labels) < 2 else ("map" if len(labels) >= 5 else "bar")
+    return None
+
+
+def choose_kind(query: str, labels: list[str], values: list[float]) -> str:
+    strong = strong_kind(query, labels)
+    if strong:
+        return strong
     q = strip_diacritics(query).lower()
     if any(
         k in q
@@ -252,19 +287,24 @@ def build_chart(
     query: str,
     data: dict[str, Any],
     *,
-    force_kind: str | None = None,
+    hint: str | None = None,
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     """Return (chart, table) following insseption-agents skill.
 
-    Single-number answers keep a table but skip the chart.
+    Single-number answers keep a table but skip the chart. ``hint`` (the planner's
+    chart_hint) only breaks ties when neither the request nor the data shape decides.
     """
     labels, values, table_rows = extract_series(data)
     if not values:
         return None, None
     columns = data.get("columns") or []
     value_label = str(columns[-1]) if columns else "value"
-    kind = force_kind or choose_kind(query, labels, values)
+    kind = strong_kind(query, labels) or (hint if hint in ("line", "bar", "map") else None) or choose_kind(query, labels, values)
     table = {"columns": ["label", "value"], "rows": table_rows}
+    wide = wide_series(data.get("rows") or [])
+    if wide and len(wide[1]) > 1:
+        years, series, label_name = wide
+        table = {"columns": [label_name, *years], "rows": [[lab, *vals] for lab, vals in series]}
     # One figure → no chart (still return the table for download/context)
     if len(values) < 2:
         return None, table
@@ -290,16 +330,48 @@ def parse_year_range(text: str) -> tuple[int, int] | None:
     if m:
         a, b = int(m.group("a")), int(m.group("b"))
         return (a, b) if a <= b else (b, a)
-    years = [int(y) for y in _YEAR_LIST_RE.findall(text)]
+    years = sorted({int(y) for y in _YEAR_LIST_RE.findall(text)})
     if len(years) >= 2:
-        return min(years), max(years)
+        return years[0], years[-1]
     return None
+
+
+_NUM_WORDS = {
+    "two": 2, "three": 3, "five": 5, "ten": 10, "doi": 2, "trei": 3, "cinci": 5, "zece": 10,
+    "ket": 2, "harom": 3, "ot": 5, "tiz": 10,
+}
+_RELATIVE_RE = re.compile(
+    r"(?:last|past|recent|ultimii|ultimele|elmult|utolso)\s+(\d{1,2}|[a-z]+)\s+(?:years?|ani|ev)",
+    re.I,
+)
+
+
+def relative_year_range(text: str, meta: dict[str, Any]) -> tuple[int, int] | None:
+    """'last 10 years' / 'ultimii 5 ani' / 'elmúlt 5 év' → span ending at the matrix's latest year."""
+    m = _RELATIVE_RE.search(strip_diacritics(text or "").lower())
+    if not m:
+        return None
+    raw = m.group(1)
+    n = int(raw) if raw.isdigit() else _NUM_WORDS.get(raw)
+    if not n:
+        return None
+    latest = None
+    for d in meta.get("dimensions") or []:
+        lab = (d.get("label") or "").lower()
+        if any(k in lab for k in ("year", "ani", "perioad")) and "age" not in lab:
+            ys = [int(y) for o in d.get("options") or [] for y in _YEAR_LIST_RE.findall(str(o.get("label") or ""))]
+            if ys:
+                latest = max(ys)
+    if latest is None:
+        return None
+    return latest - n + 1, latest
 
 
 def apply_year_range_selections(
     meta: dict[str, Any],
     selections: dict[str, Any] | None,
     text: str,
+    yr: tuple[int, int] | None = None,
 ) -> dict[str, list[int]]:
     """Select year span + sensible TOTAL defaults on other dimensions."""
     out: dict[str, list[int]] = {}
@@ -307,7 +379,7 @@ def apply_year_range_selections(
         for k, v in selections.items():
             if isinstance(v, list):
                 out[str(k)] = [int(x) for x in v]
-    yr = parse_year_range(text)
+    yr = yr or parse_year_range(text)
     dims = meta.get("dimensions") or []
     if not yr:
         return out
@@ -365,6 +437,27 @@ def apply_year_range_selections(
     return out
 
 
+def apply_single_year(
+    meta: dict[str, Any], selections: dict[str, Any] | None, year: int
+) -> dict[str, list[int]]:
+    """Pin the year dimension to one requested year (when the matrix has it); drop non-dim keys."""
+    out = {
+        str(k): [int(x) for x in v]
+        for k, v in (selections or {}).items()
+        if str(k).isdigit() and isinstance(v, list)
+    }
+    for d in meta.get("dimensions") or []:
+        lab = (d.get("label") or "").lower()
+        if not (any(k in lab for k in ("year", "ani", "perioad")) and "age" not in lab):
+            continue
+        for o in d.get("options") or []:
+            ys = _YEAR_LIST_RE.findall(str(o.get("label") or ""))
+            if ys and int(ys[0]) == year and o.get("nom_item_id") is not None:
+                out[str(d.get("dim_code"))] = [int(o["nom_item_id"])]
+                break
+    return out
+
+
 def mentioned_years(text: str) -> tuple[int, int] | None:
     """Year range from free text, including a single year as (y, y)."""
     yr = parse_year_range(text)
@@ -418,13 +511,13 @@ def _is_county_option(label: str) -> bool:
         return False
     if "MACROREGION" in Lu or Lu.startswith("MACRO"):
         return False
-    if "REGION" in Lu:
+    if "REGION" in Lu or "REGIUNE" in Lu:
         return False
     return True
 
 
 def expand_county_selections(meta: dict[str, Any], selections: dict[str, Any] | None) -> dict[str, list[int]]:
-    """Force TOTAL×counties×latest year when meta has a territory dimension."""
+    """Force TOTAL×counties when meta has a territory dimension; latest year unless one is chosen."""
     out: dict[str, list[int]] = {}
     if selections:
         for k, v in selections.items():
@@ -448,7 +541,8 @@ def expand_county_selections(meta: dict[str, Any], selections: dict[str, Any] | 
             k in lab
             for k in ("year", "ani", "perioad", "luni", "month", "trimestr", "quarter", "év", "hónap", "negyedév")
         ):
-            out[code] = [int(opts[-1]["nom_item_id"])]
+            if not out.get(code):
+                out[code] = [int(opts[-1]["nom_item_id"])]
         elif any(k in lab for k in ("nace", "activit", "caen")):
             total = next(
                 (o for o in opts if (o.get("label") or "").strip().upper() == "TOTAL"),
@@ -464,3 +558,57 @@ def expand_county_selections(meta: dict[str, Any], selections: dict[str, Any] | 
         elif code not in out:
             out[code] = [int(opts[0]["nom_item_id"])]
     return out
+
+
+_COUNTY_ALIASES = {
+    "bucharest": ("bucharest", "bucuresti", "bukarest"),
+    "cluj": ("cluj", "kolozs"),
+    "timis": ("timis", "temes"),
+    "bihor": ("bihor", "bihar"),
+    "mures": ("mures", "maros"),
+    "harghita": ("harghita", "hargita"),
+    "covasna": ("covasna", "kovaszna"),
+    "satu mare": ("satu mare", "szatmar"),
+    "brasov": ("brasov", "brasso"),
+    "sibiu": ("sibiu", "szeben"),
+    "maramures": ("maramures", "maramaros"),
+    "salaj": ("salaj", "szilagy"),
+    "bistrita-nasaud": ("bistrita", "beszterce"),
+    "hunedoara": ("hunedoara", "hunyad"),
+    "iasi": ("iasi", "jaszvasar"),
+    "constanta": ("constanta", "konstanca"),
+}
+
+
+def _county_keys(label: str) -> tuple[str, ...]:
+    key = norm_county(label)
+    key = re.sub(r"^municipiul\s+|\s+municipality$", "", key).strip()
+    key = norm_county(key)
+    return _COUNTY_ALIASES.get(key, (key,))
+
+
+def select_named_counties(
+    meta: dict[str, Any], selections: dict[str, Any] | None, query: str
+) -> dict[str, list[int]] | None:
+    """Select only the counties named in the query (e.g. 'Cluj and Timiș'); None if none named."""
+    q = strip_diacritics(query or "").lower()
+    for d in meta.get("dimensions") or []:
+        lab = (d.get("label") or "").lower()
+        if not any(k in lab for k in ("county", "counties", "jude", "territor")):
+            continue
+        ids: list[int] = []
+        for o in d.get("options") or []:
+            olab = o.get("label") or ""
+            if o.get("nom_item_id") is None or not _is_county_option(olab):
+                continue
+            for key in _county_keys(olab):
+                tail = "" if len(key) >= 4 else r"(?![a-z])"
+                if re.search(r"(?<![a-z])" + re.escape(key) + tail, q):
+                    ids.append(int(o["nom_item_id"]))
+                    break
+        if not ids:
+            return None
+        out = {str(k): [int(x) for x in v] for k, v in (selections or {}).items() if isinstance(v, list)}
+        out[str(d.get("dim_code"))] = ids
+        return out
+    return None

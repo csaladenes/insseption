@@ -3,6 +3,16 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import codecs
+
+
+def _cp1250_fallback(err: UnicodeDecodeError) -> tuple[str, int]:
+    """TEMPO occasionally mixes Windows-1250 bytes (e.g. 0xA0 nbsp) into UTF-8 bodies."""
+    bad = err.object[err.start : err.end]
+    return bad.decode("cp1250", errors="replace"), err.end
+
+
+codecs.register_error("cp1250-fallback", _cp1250_fallback)
 import time
 from typing import Any
 
@@ -99,7 +109,7 @@ async def _request(
             _record_success()
             if expect_json:
                 try:
-                    return resp.json()
+                    return json.loads(resp.content.decode("utf-8", errors="cp1250-fallback"))
                 except json.JSONDecodeError as exc:
                     raise ApiError(
                         "upstream_json",

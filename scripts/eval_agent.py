@@ -184,6 +184,8 @@ def run_case(base: str, case: dict, use_judge: bool) -> dict:
     matrix = (resp.get("matrix") or "").upper()
     if case.get("matrix"):
         checks["matrix"] = any(matrix.startswith(p) for p in case["matrix"])
+    elif "matrix" in case:
+        checks["no_matrix"] = not matrix
     if refuse:
         checks["no_data_on_refusal"] = not resp.get("chart")
     kind = chart_kind(resp.get("chart"))
@@ -199,10 +201,14 @@ def run_case(base: str, case: dict, use_judge: bool) -> dict:
         if lang:
             checks["lang"] = lang == case["lang"]
     if case.get("numbers"):
-        lo, hi = case["numbers"]
+        bands = case["numbers"] if isinstance(case["numbers"][0], list) else [case["numbers"]]
         rows = [resp.get("data"), (resp.get("table") or {}).get("rows")]
-        checks["data_numbers"] = any(lo <= n <= hi for n in data_values(rows))
-        checks["numbers"] = any(lo <= n <= hi for n in numbers_in(answer_body(resp.get("answer", ""))))
+        in_band = lambda vals: any(lo <= n <= hi for n in vals for lo, hi in bands)  # noqa: E731
+        checks["data_numbers"] = in_band(data_values(rows))
+        checks["numbers"] = in_band(numbers_in(answer_body(resp.get("answer", ""))))
+    if case.get("rows"):
+        lo, hi = case["rows"]
+        checks["rows"] = lo <= len((resp.get("table") or {}).get("rows") or []) <= hi
     for bad in case.get("forbid", []):
         checks[f"forbid:{bad}"] = bad.lower() not in text.lower()
 
@@ -212,6 +218,7 @@ def run_case(base: str, case: dict, use_judge: bool) -> dict:
         "id": case["id"], "lang": case["lang"], "passed": passed,
         "latency_s": round(last_dt, 1), "total_s": round(total, 1),
         "matrix": matrix or None, "chart": kind, "error": resp.get("error"),
+        "table_rows": len((resp.get("table") or {}).get("rows") or []),
         "failed": [k for k, v in checks.items() if not v],
         "judge": j, "answer": text[:600],
     }
@@ -258,7 +265,7 @@ def main() -> int:
     for r in results:
         mark = "PASS" if r["passed"] else "FAIL"
         js = r["judge"].get("score")
-        print(f"{mark} {r['id']:<22} {r['latency_s']:>5.1f}s {str(r['matrix']):<9} {r['chart']:<5} judge={js} "
+        print(f"{mark} {r['id']:<22} {r['latency_s']:>5.1f}s {str(r['matrix']):<9} {r['chart']:<5} rows={r.get('table_rows', 0):<3} judge={js} "
               + (f"failed={r['failed']} " if r["failed"] else "")
               + (f"| {r['judge'].get('reason')}" if js is not None and js < 2 else ""))
     lat = sorted(r["latency_s"] for r in results)
