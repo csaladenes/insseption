@@ -150,7 +150,11 @@
     "POP105",
     "POP107"
    ],
-   "chart": "any"
+   "chart": "any",
+   "rows": [
+    2,
+    3
+   ]
   },
   {
    "id": "pop_compare_en",
