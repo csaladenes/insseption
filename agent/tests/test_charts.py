@@ -134,6 +134,19 @@ def test_choose_kind(query, labels, kind):
     assert choose_kind(query, labels, [1.0] * len(labels)) == kind
 
 
+@pytest.mark.parametrize(
+    "query, kind",
+    [
+        ("Population of Romania by sex", "bar"),  # 'romania' contains 'ani'
+        ("Numărul de animale pe specii", "bar"),
+        ("Evoluția populației în ultimii ani", "line"),
+        ("Trend of births", "line"),
+    ],
+)
+def test_weak_line_keywords_match_whole_words(query, kind):
+    assert choose_kind(query, ["a", "b", "c"], [1.0, 2.0, 3.0]) == kind
+
+
 COUNTIES = tall([(f"County {i}", str(1000 + i)) for i in range(42)])
 
 

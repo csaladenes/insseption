@@ -199,18 +199,7 @@ def choose_kind(query: str, labels: list[str], values: list[float]) -> str:
     if strong:
         return strong
     q = strip_diacritics(query).lower()
-    if any(
-        k in q
-        for k in (
-            "trend",
-            "over time",
-            "time series",
-            "evolutie",
-            "evolution",
-            "ani",
-            "years",
-        )
-    ):
+    if re.search(r"(?<![a-z])(?:trend|over time|time series|evolut|years|(?:ani|anii|anilor)(?![a-z]))", q):
         return "line"
     if len(values) <= 12:
         return "bar"
